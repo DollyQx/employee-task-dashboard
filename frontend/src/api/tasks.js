@@ -11,7 +11,9 @@
 import { prioritize } from '../utils/prioritize';
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '');
-const BASE_URL = configuredBaseUrl || (import.meta.env.DEV ? '/api' : null);
+const BASE_URL = configuredBaseUrl
+  ? `${configuredBaseUrl}/api`
+  : (import.meta.env.DEV ? '/api' : null);
 
 /**
  * Fetches from a single endpoint and returns the tasks array.

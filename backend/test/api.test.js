@@ -41,6 +41,7 @@ test('GET /api/crm/tasks returns the CRM task response shape', async () => {
   const { response, body } = await getJson('/api/crm/tasks');
 
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), productionOrigin);
   assert.equal(body.source, 'CRM (Mock)');
   assert.equal(body.count, 8);
   assert.equal(body.tasks.length, body.count);
@@ -55,6 +56,7 @@ test('GET /api/helpdesk/tasks returns the Helpdesk task response shape', async (
   const { response, body } = await getJson('/api/helpdesk/tasks');
 
   assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), productionOrigin);
   assert.equal(body.source, 'Helpdesk (Mock)');
   assert.equal(body.count, 8);
   assert.equal(body.tasks.length, body.count);
@@ -63,4 +65,21 @@ test('GET /api/helpdesk/tasks returns the Helpdesk task response shape', async (
     Object.keys(body.tasks[0]).sort(),
     ['deadline', 'employee', 'id', 'source', 'sourceUrl', 'status', 'title', 'urgency'].sort()
   );
+});
+
+test('OPTIONS preflight permits GET from the Vercel origin on both task routes', async () => {
+  for (const path of ['/api/crm/tasks', '/api/helpdesk/tasks']) {
+    const response = await fetch(`${baseUrl}${path}`, {
+      method: 'OPTIONS',
+      headers: {
+        Origin: productionOrigin,
+        'Access-Control-Request-Method': 'GET',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+    });
+
+    assert.equal(response.status, 204);
+    assert.equal(response.headers.get('access-control-allow-origin'), productionOrigin);
+    assert.match(response.headers.get('access-control-allow-methods'), /GET/);
+  }
 });
