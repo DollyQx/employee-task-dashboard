@@ -84,9 +84,9 @@ function createReportsRoutes({ poolProvider = getPool } = {}) {
           COUNT(t.id) FILTER (WHERE t.crm_status = 'done') AS my_completed
         FROM task_assignments ta
         JOIN tasks t ON ta.task_id = t.id
-        WHERE ta.user_id = $1
+        WHERE ta.user_id = $1 AND ta.organization_id = $2 AND t.organization_id = $2
       `;
-      const myTasksRes = await pool.query(myTasksQuery, [req.user.id]);
+      const myTasksRes = await pool.query(myTasksQuery, [req.user.id, orgId]);
 
       // 6. Recent audit events
       const recentActivityQuery = `

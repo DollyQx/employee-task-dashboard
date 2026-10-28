@@ -1,9 +1,37 @@
 const express = require('express');
 const { getPool } = require('../db/pool');
 const { hashPassword, verifyPassword, generateSessionToken, hashToken } = require('../utils/auth');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, extractToken } = require('../middleware/auth');
 const { logAudit } = require('../utils/audit');
 const { createRateLimiter } = require('../middleware/rateLimiter');
+
+function getCookieOptions() {
+  const isProduction = process.env.NODE_ENV === 'production';
+  // Cross-origin setups (e.g. Vercel on *.vercel.app, Render on *.onrender.com)
+  // require SameSite=None and Secure=true for cookies to be attached in fetch().
+  // Defaults to 'none' in production, 'lax' in development.
+  const sameSite = process.env.COOKIE_SAME_SITE || (isProduction ? 'none' : 'lax');
+  const secure = process.env.COOKIE_SECURE !== undefined
+    ? process.env.COOKIE_SECURE === 'true'
+    : (sameSite === 'none' ? true : isProduction);
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+  };
+}
+
+function getClearCookieOptions() {
+  const opts = getCookieOptions();
+  return {
+    path: opts.path,
+    sameSite: opts.sameSite,
+    secure: opts.secure,
+  };
+}
 
 function createAuthRoutes({ poolProvider = getPool } = {}) {
   const router = express.Router();
@@ -82,14 +110,7 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
       });
 
       // Set cookie
-      const isProduction = process.env.NODE_ENV === 'production';
-      res.cookie('taskflow_session', sessionToken, {
-        httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      res.cookie('taskflow_session', sessionToken, getCookieOptions());
 
       const userProfile = {
         id: user.id,
@@ -121,14 +142,19 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
 
   router.post('/logout', async (req, res) => {
     try {
+      const pool = poolProvider();
       if (req.sessionId) {
-        const pool = poolProvider();
         await pool.query('DELETE FROM user_sessions WHERE id = $1', [req.sessionId]);
+      } else {
+        const token = extractToken(req);
+        if (token) {
+          await pool.query('DELETE FROM user_sessions WHERE session_token = $1', [token]);
+        }
       }
     } catch (err) {
       console.error('Logout error:', err.message);
     }
-    res.clearCookie('taskflow_session', { path: '/' });
+    res.clearCookie('taskflow_session', getClearCookieOptions());
     return res.json({ message: 'Logged out successfully.' });
   });
 
@@ -158,11 +184,13 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
           [hashed, expiresAt, user.id]
         );
 
-        // In development / demo when SMTP is not configured, we return reset token simulation safely
+        // In development ONLY (never in production), simulate token return when SMTP is not configured.
+        // In production the token is never returned in the response regardless of SMTP configuration.
+        const isProduction = process.env.NODE_ENV === 'production';
         const smtpConfigured = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
         return res.json({
           message: 'If an account exists with that email, instructions have been generated.',
-          simulationToken: smtpConfigured ? undefined : rawToken,
+          simulationToken: (!isProduction && !smtpConfigured) ? rawToken : undefined,
         });
       }
 
@@ -222,7 +250,14 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
   });
 
   // Fast demo user switcher for testing & evaluation
+  // SECURITY: Disabled in production by default to prevent unauthenticated privilege escalation.
+  // Any exception requires explicit ALLOW_DEMO_SWITCH=true and fails closed.
   router.get('/demo-users', async (req, res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const allowDemo = process.env.ALLOW_DEMO_SWITCH === 'true';
+    if (isProduction && !allowDemo) {
+      return res.status(403).json({ error: 'Demo persona switching is disabled in production.' });
+    }
     try {
       const pool = poolProvider();
       const query = `
@@ -254,7 +289,14 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
+  // SECURITY: Disabled in production by default to prevent unauthenticated privilege escalation.
+  // Any exception requires explicit ALLOW_DEMO_SWITCH=true and fails closed.
   router.post('/switch-demo-user', async (req, res) => {
+    const isProduction = process.env.NODE_ENV === 'production';
+    const allowDemo = process.env.ALLOW_DEMO_SWITCH === 'true';
+    if (isProduction && !allowDemo) {
+      return res.status(403).json({ error: 'Demo persona switching is disabled in production.' });
+    }
     const { userId } = req.body || {};
     if (!userId) return res.status(400).json({ error: 'User ID required.' });
 
@@ -293,13 +335,7 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
         [sessionToken, user.id, user.organization_id, expiresAt]
       );
 
-      res.cookie('taskflow_session', sessionToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-        path: '/',
-      });
+      res.cookie('taskflow_session', sessionToken, getCookieOptions());
 
       return res.json({
         message: `Switched to ${user.full_name} (${user.crm_role}).`,

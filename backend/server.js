@@ -4,7 +4,7 @@ const cors = require('cors');
 const crmRoutes = require('./routes/crm');
 const helpdeskRoutes = require('./routes/helpdesk');
 const { checkDatabaseConnection, closeDatabasePool, getPool } = require('./db/pool');
-const { createAuthMiddleware } = require('./middleware/auth');
+const { createAuthMiddleware, csrfProtection } = require('./middleware/auth');
 const { createAuthRoutes } = require('./routes/auth');
 const { createTasksRoutes } = require('./routes/tasks');
 const { createEmployeesRoutes } = require('./routes/employees');
@@ -16,13 +16,28 @@ const { createNotificationsRoutes } = require('./routes/notifications');
 const { createAuditRoutes } = require('./routes/audit');
 
 const PORT = process.env.PORT || 3001;
-const allowedOrigins = [
+const defaultOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
   'https://employee-task-dashboard-chi.vercel.app',
 ];
 
-function createApp({ databaseCheck = checkDatabaseConnection, poolProvider = getPool } = {}) {
+function resolveAllowedOrigins() {
+  const origins = new Set(defaultOrigins);
+  if (process.env.FRONTEND_URL) {
+    process.env.FRONTEND_URL.split(',').map((s) => s.trim()).filter(Boolean).forEach((o) => origins.add(o));
+  }
+  if (process.env.ALLOWED_ORIGINS) {
+    process.env.ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean).forEach((o) => origins.add(o));
+  }
+  return Array.from(origins);
+}
+
+function createApp({
+  databaseCheck = checkDatabaseConnection,
+  poolProvider = getPool,
+  allowedOrigins = resolveAllowedOrigins(),
+} = {}) {
   const app = express();
   app.disable('x-powered-by');
 
@@ -52,12 +67,17 @@ function createApp({ databaseCheck = checkDatabaseConnection, poolProvider = get
   app.use(cors(dynamicCors));
 
 // ─── Body Parsers ─────────────────────────────────────────────────────────────
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ─── Authentication Context Middleware ────────────────────────────────────────
   const authenticate = createAuthMiddleware({ poolProvider });
   app.use(authenticate);
+
+// ─── CSRF Protection ──────────────────────────────────────────────────────────
+// Validates Origin/Referer on mutating cookie-based requests in production.
+// Bearer-token requests (Authorization header) are exempt per the CSRF spec.
+  app.use(csrfProtection(allowedOrigins));
 
 // ─── Legacy Mock Integrations ─────────────────────────────────────────────────
 // NOTE: Preserved for existing test suites and backward compatibility
@@ -112,6 +132,11 @@ const app = createApp();
 
 // ─── Start Server ────────────────────────────────────────────────────────────
 if (require.main === module) {
+  if (process.env.NODE_ENV === 'production' && !process.env.DATABASE_URL) {
+    console.error('FATAL: DATABASE_URL environment variable is required in production.');
+    process.exit(1);
+  }
+
   const server = app.listen(PORT, () => {
     console.log(`\n======================================================`);
     console.log(`✅ Aulten Digital - TaskFlow Enterprise CRM API`);

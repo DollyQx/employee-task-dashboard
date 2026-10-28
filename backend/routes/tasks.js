@@ -229,19 +229,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
             t.due_date IS NOT NULL 
             AND t.due_date < CURRENT_DATE 
             AND t.crm_status != 'done'
-          ) AS is_overdue,
-          (
-            SELECT json_agg(json_build_object(
-              'id', ass_u.id,
-              'full_name', ass_u.full_name,
-              'email', ass_u.email,
-              'avatar', ass_u.avatar,
-              'crm_role', ass_u.crm_role
-            ))
-            FROM task_assignments ta
-            JOIN users ass_u ON ta.user_id = ass_u.id
-            WHERE ta.task_id = t.id
-          ) AS assignees
+          ) AS is_overdue
         FROM tasks t
         LEFT JOIN projects p ON t.project_id = p.id
         LEFT JOIN departments d ON t.department_id = d.id
@@ -252,6 +240,15 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       if (rows.length === 0) {
         return res.status(404).json({ error: 'Task not found.' });
       }
+
+      // Fetch assignees
+      const assigneesQuery = `
+        SELECT ass_u.id, ass_u.full_name, ass_u.email, ass_u.avatar, ass_u.crm_role
+        FROM task_assignments ta
+        JOIN users ass_u ON ta.user_id = ass_u.id
+        WHERE ta.task_id = $1
+      `;
+      const assigneesResult = await pool.query(assigneesQuery, [taskId]);
 
       // Fetch comments
       const commentsQuery = `
@@ -279,7 +276,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       return res.json({
         task: {
           ...rows[0],
-          assignees: rows[0].assignees || [],
+          assignees: assigneesResult.rows,
           comments: commentsResult.rows,
           attachments: attachmentsResult.rows,
         },
@@ -778,6 +775,16 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     try {
       const pool = poolProvider();
       const taskId = req.params.id;
+      const orgId = req.user.organization_id;
+
+      // Verify task belongs to the caller's organization before returning comments
+      const taskCheck = await pool.query(
+        'SELECT id FROM tasks WHERE id = $1 AND organization_id = $2',
+        [taskId, orgId]
+      );
+      if (taskCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Task not found.' });
+      }
 
       const { rows } = await pool.query(
         `SELECT 

@@ -1,4 +1,4 @@
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL CHECK (length(btrim(name)) > 0),
   slug TEXT NOT NULL UNIQUE CHECK (
@@ -13,7 +13,7 @@ CREATE TABLE organizations (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
   full_name TEXT NOT NULL CHECK (length(btrim(full_name)) > 0),
@@ -25,9 +25,9 @@ CREATE TABLE users (
   UNIQUE (organization_id, email)
 );
 
-CREATE INDEX users_organization_role_idx ON users (organization_id, role);
+CREATE INDEX IF NOT EXISTS users_organization_role_idx ON users (organization_id, role);
 
-CREATE TABLE tasks (
+CREATE TABLE IF NOT EXISTS tasks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
   created_by UUID NOT NULL,
@@ -43,11 +43,11 @@ CREATE TABLE tasks (
     REFERENCES users (organization_id, id) ON DELETE RESTRICT
 );
 
-CREATE INDEX tasks_organization_status_idx ON tasks (organization_id, status);
-CREATE INDEX tasks_organization_due_date_idx ON tasks (organization_id, due_date);
-CREATE INDEX tasks_organization_created_at_idx ON tasks (organization_id, created_at);
+CREATE INDEX IF NOT EXISTS tasks_organization_status_idx ON tasks (organization_id, status);
+CREATE INDEX IF NOT EXISTS tasks_organization_due_date_idx ON tasks (organization_id, due_date);
+CREATE INDEX IF NOT EXISTS tasks_organization_created_at_idx ON tasks (organization_id, created_at);
 
-CREATE TABLE task_assignments (
+CREATE TABLE IF NOT EXISTS task_assignments (
   organization_id UUID NOT NULL,
   task_id UUID NOT NULL,
   user_id UUID NOT NULL,
@@ -62,4 +62,4 @@ CREATE TABLE task_assignments (
     REFERENCES users (organization_id, id) ON DELETE RESTRICT
 );
 
-CREATE INDEX task_assignments_user_idx ON task_assignments (organization_id, user_id);
+CREATE INDEX IF NOT EXISTS task_assignments_user_idx ON task_assignments (organization_id, user_id);

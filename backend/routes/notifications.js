@@ -34,11 +34,15 @@ function createNotificationsRoutes({ poolProvider = getPool } = {}) {
       const pool = poolProvider();
       const notifId = req.params.id;
       const userId = req.user.id;
+      const orgId = req.user.organization_id;
 
-      await pool.query(
-        'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2',
-        [notifId, userId]
+      const { rows } = await pool.query(
+        'UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2 AND organization_id = $3 RETURNING id',
+        [notifId, userId, orgId]
       );
+      if (rows.length === 0) {
+        return res.status(404).json({ error: 'Notification not found.' });
+      }
 
       return res.json({ message: 'Notification marked as read.' });
     } catch (err) {
@@ -50,8 +54,9 @@ function createNotificationsRoutes({ poolProvider = getPool } = {}) {
     try {
       const pool = poolProvider();
       const userId = req.user.id;
+      const orgId = req.user.organization_id;
 
-      await pool.query('UPDATE notifications SET is_read = true WHERE user_id = $1', [userId]);
+      await pool.query('UPDATE notifications SET is_read = true WHERE user_id = $1 AND organization_id = $2', [userId, orgId]);
 
       return res.json({ message: 'All notifications marked as read.' });
     } catch (err) {

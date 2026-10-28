@@ -11,9 +11,9 @@ TaskFlow provides role-based task tracking, project milestone management, an Ind
 | Layer | Technology | Details |
 |---|---|---|
 | **Frontend** | React 19 + Vite 8 | Pure ES Modules, vanilla design tokens, responsive sidebar, light/dark themes |
-| **Backend** | Node.js (v20+) + Express 4 | Secure RESTful architecture, parameterized SQL, role-based authorization |
-| **Database** | PostgreSQL (`pg`) + `pg-mem` | ACID transactions, UUID keys, multi-tenant organization isolation |
-| **Security** | Scrypt + Timing-Safe | OWASP memory-hard password hashing, HttpOnly cookies, rate limiting, CSP headers |
+| **Backend** | Node.js (v18+) + Express 4 | Secure RESTful architecture, parameterized SQL, role-based authorization |
+| **Database** | PostgreSQL (`pg`) + `pg-mem` | ACID transactions, UUID keys, multi-tenant organization isolation, SSL auto-configuration |
+| **Security** | Scrypt + Timing-Safe | OWASP memory-hard password hashing, HttpOnly cross-origin SameSite cookies, CSRF protection, rate limiting |
 | **Code Quality** | Node Test Runner + Oxlint | Zero dependencies test suites, sub-millisecond AST linting |
 
 ---
@@ -59,9 +59,9 @@ employee-task-dashboard/
 │   │   │   ├── 001_create_taskflow_core.sql     # Core tables (orgs, users, tasks, assignments)
 │   │   │   └── 002_aulten_digital_crm_schema.sql # Departments, clients, projects, comments, notifications, audit
 │   │   ├── migrate.js                           # Migration runner with transaction rollback
-│   │   └── pool.js                              # PostgreSQL pool and readiness probe
+│   │   └── pool.js                              # PostgreSQL pool with SSL & readiness probe
 │   ├── middleware/
-│   │   ├── auth.js                              # Session verification, role guards, tenant attachment
+│   │   ├── auth.js                              # Session verification, role guards, CSRF protection, tenant attachment
 │   │   └── rateLimiter.js                       # In-memory IP rate limiter for login & sensitive endpoints
 │   ├── routes/
 │   │   ├── auth.js                              # /api/auth (login, logout, me, demo switch, password reset)
@@ -83,11 +83,13 @@ employee-task-dashboard/
 │   │   ├── auth.js                              # Scrypt hashing, timingSafeEqual, token generators
 │   │   ├── audit.js                             # Structured audit logger
 │   │   └── notifications.js                     # In-app notification creation
-│   ├── server.js                                # Express server, security headers, dynamic CORS
+│   ├── server.js                                # Express server, dynamic CORS, startup validation
 │   └── test/
 │       ├── api.test.js                          # CORS, read-only mock route tests
 │       ├── database.test.js                     # Schema migration and readiness tests (pg-mem)
-│       └── crm.test.js                          # Auth, RBAC, task CRUD, seeding, reporting tests
+│       ├── crm.test.js                          # Auth, RBAC, task CRUD, seeding, reporting tests
+│       ├── security.test.js                     # Tenant isolation, CSRF, single-use reset, rate limiting
+│       └── postgres-integration.test.js         # Live PostgreSQL staging integration suite
 │
 ├── frontend/
 │   ├── src/
@@ -111,173 +113,186 @@ employee-task-dashboard/
 │   │   │   └── FilterBar.jsx                    # Multi-parameter search & filtering
 │   │   ├── App.jsx                              # Root enterprise shell & role routing
 │   │   └── index.css                            # Complete design system with light/dark tokens
-│   └── test/                                    # 14 frontend unit & metric tests
+│   ├── test/                                    # 14 frontend unit & metric tests
+│   └── vercel.json                              # SPA routing rewrite rule for Vercel
 │
+├── docs/
+│   ├── SECURITY_AUDIT_REPORT.md                 # Full security audit, fixes & regression verification
+│   └── DEPLOYMENT_GUIDE.md                      # PowerShell step-by-step deployment and verification
 └── README.md
 ```
 
 ---
 
-## Installation & Setup
+## Windows PowerShell Quick Start
 
-### Prerequisites
-* **Node.js** ≥ 20.19 (tested with Node 22 & 24)
+Follow these steps in Windows PowerShell.
+
+### 1. Prerequisites
+* **Node.js** ≥ 18.0.0 (Node 20 or 22 LTS recommended)
 * **npm** ≥ 9
-* Optional: Managed PostgreSQL database (Neon, Supabase, Render, AWS RDS, or local Docker)
-
-### 1 — Install backend dependencies
-```bash
-cd backend
-npm install
+* Check versions:
+```powershell
+node -v
+npm -v
 ```
 
-### 2 — Install frontend dependencies
-```bash
-cd frontend
+### 2. Install Dependencies
+
+Open a PowerShell terminal at the repository root:
+```powershell
+# Install backend dependencies
+cd backend
 npm install
+
+# Install frontend dependencies
+cd ..\frontend
+npm install
+
+# Return to root
+cd ..
 ```
 
 ---
 
 ## Running Locally
 
-You need two terminal windows:
+You will need two PowerShell terminal windows:
 
 ### Terminal 1 — Start the Backend (Port 3001)
-```bash
-cd backend
+```powershell
+cd C:\Users\shiva\Downloads\projects\employee-task-dashboard\backend
 npm start
 ```
-*Note: In development, nodemon is available via `npm run dev`.*
+*For automatic restart during development: `npm run dev`*
 
 ### Terminal 2 — Start the Frontend (Port 5173)
-```bash
-cd frontend
+```powershell
+cd C:\Users\shiva\Downloads\projects\employee-task-dashboard\frontend
 npm run dev
 ```
 
-Open your browser at **http://localhost:5173**
+Open your web browser at **http://localhost:5173**
 
 ---
 
-## Database Management & Seeding
+## Database Management & Seeding (Local / Staging)
 
-### 1. Database Configuration
-Copy `backend/.env.example` to `backend/.env` and supply your database connection string:
-```bash
-DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+### 1. Configure Local Database Connection
+In PowerShell inside the `backend` directory:
+```powershell
+cd backend
+Copy-Item .env.example .env
+```
+Edit `backend\.env` with your favorite text editor (Notepad, VS Code):
+```powershell
+notepad .env
+```
+Set your `DATABASE_URL` (for example, Neon, Render, Supabase, or local PostgreSQL):
+```env
+DATABASE_URL="postgresql://postgres:password@localhost:5432/taskflow_crm?sslmode=disable"
 ```
 
-### 2. Apply Schema Migrations
-```bash
-cd backend
+### 2. Apply Database Migrations
+```powershell
 npm run db:migrate
 ```
-Applies `001_create_taskflow_core.sql` and `002_aulten_digital_crm_schema.sql` safely within a transaction and records applied migrations in `schema_migrations`.
+Applies `001_create_taskflow_core.sql` and `002_aulten_digital_crm_schema.sql` idempotently inside a transaction.
 
 ### 3. Seed Realistic Indian Demo Data
-```bash
-cd backend
+```powershell
 npm run db:seed
 ```
-* Sets up the **Aulten Digital** organization.
-* Seeds **12 departments** (Engineering, Web, Mobile, DevOps, QA, Cybersecurity, Sales, HR, etc.).
-* Seeds **18 Indian employees** with realistic designations, reporting managers, and hashed passwords.
-* Seeds **7 enterprise clients** with CRM pipeline stages and deal values in INR (₹).
-* Seeds **7 key company projects** with health indicators and budgets.
-* Seeds **52 tasks** spanning all statuses (Backlog, To Do, In Progress, In Review, Blocked, Done) and priorities (Low, Medium, High, Urgent), with comments and tags.
-* Seeds initial notifications and security audit logs.
-* **Safe & Idempotent**: Uses `ON CONFLICT` clauses; safe to run multiple times without throwing duplicate key errors.
+Seeds 12 departments, 18 Indian employees, 7 CRM clients, 7 projects, 52 tasks, and demo audit logs. Safe and idempotent.
 
-### 4. Secure Initial Admin Provisioning
-To provision a brand new administrative account without default or hardcoded passwords:
-```bash
-cd backend
-ADMIN_NAME="Aulten Super Admin" ADMIN_EMAIL="admin@aulten.example.com" npm run provision:admin
+### 4. Secure Initial Admin Provisioning (PowerShell)
+To provision an initial Super Admin account without hardcoded credentials:
+```powershell
+$env:ADMIN_NAME = "Aulten Super Admin"
+$env:ADMIN_EMAIL = "admin@aulten.example.com"
+npm run provision:admin
 ```
-If `ADMIN_PASSWORD` is omitted, the script automatically generates a 24-character cryptographically secure password and outputs it to the console once.
+* If `$env:ADMIN_PASSWORD` is omitted, a 24-character cryptographically secure password is generated and displayed once.
+* If re-run on an existing admin whose password is already set, the existing password is preserved safely.
 
 ---
 
 ## Testing & Quality Assurance
 
-All test suites execute against isolated in-memory PostgreSQL (`pg-mem`) without requiring external database provisioning.
-
-### Run All Backend Tests (18 Tests)
-```bash
+### Run All Backend Tests (33 Passing Tests)
+```powershell
 cd backend
 npm test
 ```
-**Test Coverage:**
+**Test Coverage (33 Tests):**
 * API security headers & CORS origin restrictions
-* Legacy mock CRM and Helpdesk response verification
-* PostgreSQL schema migration application & constraints
+* Legacy mock CRM and Helpdesk response shapes
+* PostgreSQL schema migrations, indexes & foreign key constraints
 * Scrypt password hashing & constant-time comparison
 * Idempotent demo database seeding
-* Role-based access control (Employees blocked from audit logs, Admins permitted)
+* Role-based access control (Employees blocked from audit logs and bulk actions)
 * Task CRUD lifecycle (Create, Kanban status patch, add comment, delete)
-* Dashboard analytics calculation & CSV export formatting
+* Tenant isolation across tasks, comments, projects, and clients
+* CSV export authentication and tenant isolation
+* Password reset token single-use invalidation
+* Simulation token suppressed in production (`NODE_ENV=production`)
+* Demo user switcher fail-closed in production
+* Clean client CRM join with active projects count
+* Safe partial updates for employees, projects, and clients
+* CSRF protection on mutating cookie requests
+* Rate limiter blocking brute-force login attempts
 * Database readiness probe (HTTP 200 on healthy connection, HTTP 503 on unconfigured)
 
-### Run All Frontend Tests (14 Tests)
-```bash
+### Run Live PostgreSQL Staging Integration Test
+When a disposable staging PostgreSQL database is available:
+```powershell
+cd backend
+$env:TEST_DATABASE_URL = "postgresql://user:password@host:5432/disposable_staging_db?sslmode=require"
+npm run test:integration
+```
+* Verifies real PostgreSQL information_schema tables, UUID generation, scrypt verification, session persistence, and derived joins.
+* **Safety guard**: Refuses to run if `TEST_DATABASE_URL` matches `DATABASE_URL` to protect production data.
+
+### Run All Frontend Tests (14 Passing Tests)
+```powershell
 cd frontend
 npm test
 ```
-**Test Coverage:**
-* Date range validation and comparison intervals
-* Deadline calculations and calendar boundary rules
-* Priority score algorithm and tie-breaking stability
-* Safe external URL validator (blocking placeholder / javascript / data URIs)
-* Snapshot metrics and multi-parameter task filters
-* Mock API parallel fetch and error conversions
 
 ### Run Frontend Linter (Oxlint)
-```bash
+```powershell
 cd frontend
 npm run lint
 ```
-*0 warnings and 0 errors across 37 files.*
+*0 warnings and 0 errors.*
 
 ### Run Frontend Production Build (Vite)
-```bash
+```powershell
 cd frontend
 npm run build
 ```
-*Generates optimized production bundle in `frontend/dist/` in ~220ms.*
-
----
-
-## Security Architecture
-
-* **Broken Access Control & IDOR Mitigation**: All queries enforce tenant isolation using `WHERE organization_id = req.user.organization_id`. User roles (`super_admin`, `admin`, `manager`, `employee`) are checked server-side via `requireRole` middleware.
-* **SQL Injection Prevention**: Parameterized queries are used exclusively (`$1, $2, ...`); no string concatenation.
-* **Password Hashing**: Uses Node's native `crypto.scrypt` with a 16-byte random salt and memory-hard parameters. Verification uses `crypto.timingSafeEqual` to prevent timing attacks.
-* **Session Management**: Cryptographically random 256-bit session tokens stored in `user_sessions`. Supported via `Authorization: Bearer` and secure, `HttpOnly`, `SameSite=Lax` cookies.
-* **Rate Limiting**: In-memory IP rate limiter guards `/api/auth/login` and sensitive endpoints, returning HTTP 429 with `Retry-After`.
-* **Cross-Site Scripting (XSS)**: No `dangerouslySetInnerHTML`. Response headers include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Cache-Control: no-store`. `X-Powered-By` is disabled.
-* **CSV Injection Defense**: Formula triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) are sanitized before generating CSV report exports.
+*Generates optimized production bundle in `frontend/dist/` in < 200ms.*
 
 ---
 
 ## Production Deployment Checklist
 
-### Frontend (Vercel)
-1. Set Root Directory to `frontend`.
-2. Configure build command: `npm run build`, output directory: `dist`.
-3. Set environment variable `VITE_API_BASE_URL` to your backend origin (e.g. `https://employee-task-dashboard-g2ug.onrender.com`, without trailing `/api`).
-4. Rebuild after configuring environment variables.
+For comprehensive step-by-step instructions with PowerShell commands, see:
+* **[Deployment Guide](docs/DEPLOYMENT_GUIDE.md)**
+* **[Security Audit Report](docs/SECURITY_AUDIT_REPORT.md)**
 
-### Backend (Render)
-1. Set Root Directory to `backend`.
-2. Set Build Command to `npm ci`.
-3. Set Start Command to `npm start`.
-4. Add secret environment variable `DATABASE_URL` pointing to your managed PostgreSQL database.
-5. Apply database migrations: Run `npm run db:migrate` in Render shell or deployment pipeline.
-6. Verify endpoints:
-   * Health: `GET https://employee-task-dashboard-g2ug.onrender.com/api/health`
-   * Readiness: `GET https://employee-task-dashboard-g2ug.onrender.com/api/ready`
-   * Tasks: `GET https://employee-task-dashboard-g2ug.onrender.com/api/tasks`
+### Brief Summary:
+1. **Render (Backend)**:
+   * Root Directory: `backend`
+   * Build Command: `npm install`
+   * Start Command: `npm start`
+   * Environment Variables: `NODE_ENV=production`, `DATABASE_URL=...`, `FRONTEND_URL=https://employee-task-dashboard-chi.vercel.app`
+2. **Vercel (Frontend)**:
+   * Root Directory: `frontend`
+   * Framework Preset: Vite
+   * Build Command: `npm run build`
+   * Output Directory: `dist`
+   * Environment Variable: `VITE_API_BASE_URL=https://employee-task-dashboard-g2ug.onrender.com`
 
 ---
 

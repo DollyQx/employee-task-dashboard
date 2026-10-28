@@ -64,19 +64,20 @@ function createEmployeesRoutes({ poolProvider = getPool } = {}) {
             SELECT COUNT(*) 
             FROM task_assignments ta
             JOIN tasks t ON ta.task_id = t.id
-            WHERE ta.user_id = u.id AND t.crm_status != 'done'
+            WHERE ta.user_id = u.id AND t.organization_id = $1 AND t.crm_status != 'done'
           ) AS active_tasks_count,
           (
             SELECT COUNT(*) 
             FROM task_assignments ta
             JOIN tasks t ON ta.task_id = t.id
-            WHERE ta.user_id = u.id AND t.crm_status = 'done'
+            WHERE ta.user_id = u.id AND t.organization_id = $1 AND t.crm_status = 'done'
           ) AS completed_tasks_count,
           (
             SELECT COUNT(*) 
             FROM task_assignments ta
             JOIN tasks t ON ta.task_id = t.id
             WHERE ta.user_id = u.id 
+              AND t.organization_id = $1
               AND t.due_date IS NOT NULL 
               AND t.due_date < CURRENT_DATE 
               AND t.crm_status != 'done'
@@ -268,40 +269,51 @@ function createEmployeesRoutes({ poolProvider = getPool } = {}) {
       const pool = poolProvider();
       const orgId = req.user.organization_id;
 
-      const coreRole = crm_role ? (crm_role === 'super_admin' ? 'owner' : (crm_role === 'admin' ? 'admin' : 'member')) : undefined;
+      const existingRes = await pool.query('SELECT * FROM users WHERE id = $1 AND organization_id = $2', [empId, orgId]);
+      if (existingRes.rows.length === 0) return res.status(404).json({ error: 'Employee not found.' });
+      const existing = existingRes.rows[0];
+
+      const newFullName = full_name ? full_name.trim() : existing.full_name;
+      const newCrmRole = crm_role || existing.crm_role;
+      const newCoreRole = crm_role ? (crm_role === 'super_admin' ? 'owner' : (crm_role === 'admin' ? 'admin' : 'member')) : existing.role;
+      const newDeptId = department_id !== undefined ? (department_id || null) : existing.department_id;
+      const newDesignation = designation !== undefined ? designation : existing.designation;
+      const newManagerId = manager_id !== undefined ? (manager_id || null) : existing.manager_id;
+      const newPhone = phone !== undefined ? phone : existing.phone;
+      const newStatus = employment_status !== undefined ? employment_status : existing.employment_status;
+      const newJoiningDate = joining_date !== undefined ? joining_date : existing.joining_date;
 
       const updateSql = `
         UPDATE users SET
-          full_name = COALESCE($1, full_name),
-          crm_role = COALESCE($2, crm_role),
-          role = COALESCE($3, role),
+          full_name = $1,
+          crm_role = $2,
+          role = $3,
           department_id = $4,
-          designation = COALESCE($5, designation),
+          designation = $5,
           manager_id = $6,
-          phone = COALESCE($7, phone),
-          employment_status = COALESCE($8, employment_status),
-          joining_date = COALESCE($9, joining_date),
+          phone = $7,
+          employment_status = $8,
+          joining_date = $9,
           updated_at = now()
         WHERE id = $10 AND organization_id = $11
         RETURNING id, full_name, email, crm_role, employee_id, designation, department_id, employment_status
       `;
 
       const values = [
-        full_name ? full_name.trim() : null,
-        crm_role || null,
-        coreRole || null,
-        department_id !== undefined ? (department_id || null) : null,
-        designation || null,
-        manager_id !== undefined ? (manager_id || null) : null,
-        phone || null,
-        employment_status || null,
-        joining_date || null,
+        newFullName,
+        newCrmRole,
+        newCoreRole,
+        newDeptId,
+        newDesignation,
+        newManagerId,
+        newPhone,
+        newStatus,
+        newJoiningDate,
         empId,
         orgId,
       ];
 
       const { rows } = await pool.query(updateSql, values);
-      if (rows.length === 0) return res.status(404).json({ error: 'Employee not found.' });
 
       await logAudit(pool, {
         organizationId: orgId,

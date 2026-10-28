@@ -9,7 +9,11 @@
     "db:migrate": "node scripts/migrate.js",
     "db:seed": "node scripts/seed.js",
     "provision:admin": "node scripts/provision-admin.js",
-    "test": "node --test"
+    "test": "node --test",
+    "test:integration": "node --test test/postgres-integration.test.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "dependencies": {
     "cors": "^2.8.5",

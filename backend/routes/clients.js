@@ -45,9 +45,15 @@ function createClientsRoutes({ poolProvider = getPool } = {}) {
           c.*,
           owner.full_name AS lead_owner_name,
           owner.avatar AS lead_owner_avatar,
-          (SELECT COUNT(*) FROM projects p WHERE p.client_id = c.id) AS active_projects_count
+          COALESCE(proj_counts.cnt, 0) AS active_projects_count
         FROM clients c
         LEFT JOIN users owner ON c.lead_owner_id = owner.id
+        LEFT JOIN (
+          SELECT client_id, COUNT(*) AS cnt
+          FROM projects
+          WHERE organization_id = $1
+          GROUP BY client_id
+        ) proj_counts ON proj_counts.client_id = c.id
         WHERE ${where.join(' AND ')}
         ORDER BY c.created_at DESC
       `;
@@ -93,10 +99,10 @@ function createClientsRoutes({ poolProvider = getPool } = {}) {
       const { rows } = await pool.query(query, [clientId, orgId]);
       if (rows.length === 0) return res.status(404).json({ error: 'Client not found.' });
 
-      // Fetch client projects
+      // Fetch client projects - tenant isolated
       const projectsRes = await pool.query(
-        'SELECT id, name, status, health, budget FROM projects WHERE client_id = $1',
-        [clientId]
+        'SELECT id, name, status, health, budget FROM projects WHERE client_id = $1 AND organization_id = $2',
+        [clientId, orgId]
       );
 
       return res.json({ client: rows[0], projects: projectsRes.rows });
@@ -188,34 +194,50 @@ function createClientsRoutes({ poolProvider = getPool } = {}) {
       const pool = poolProvider();
       const orgId = req.user.organization_id;
 
+      const existingRes = await pool.query('SELECT * FROM clients WHERE id = $1 AND organization_id = $2', [clientId, orgId]);
+      if (existingRes.rows.length === 0) return res.status(404).json({ error: 'Client not found.' });
+      const existing = existingRes.rows[0];
+
+      const newCompanyName = company_name ? company_name.trim() : existing.company_name;
+      const newContactPerson = contact_person ? contact_person.trim() : existing.contact_person;
+      const newEmail = email ? email.trim().toLowerCase() : existing.email;
+      const newPhone = phone !== undefined ? phone : existing.phone;
+      const newLeadSource = lead_source || existing.lead_source;
+      const newLeadOwnerId = lead_owner_id !== undefined ? (lead_owner_id || null) : existing.lead_owner_id;
+      const newPipelineStage = pipeline_stage && PIPELINE_STAGES.includes(pipeline_stage) ? pipeline_stage : existing.pipeline_stage;
+      const newFollowUpDate = follow_up_date !== undefined ? (follow_up_date || null) : existing.follow_up_date;
+      const newNextAction = next_action !== undefined ? next_action : existing.next_action;
+      const newDealValue = deal_value !== undefined ? Number(deal_value) : existing.deal_value;
+      const newNotes = notes !== undefined ? notes : existing.notes;
+
       const { rows } = await pool.query(
         `UPDATE clients SET
-           company_name = COALESCE($1, company_name),
-           contact_person = COALESCE($2, contact_person),
-           email = COALESCE($3, email),
+           company_name = $1,
+           contact_person = $2,
+           email = $3,
            phone = $4,
-           lead_source = COALESCE($5, lead_source),
+           lead_source = $5,
            lead_owner_id = $6,
-           pipeline_stage = COALESCE($7, pipeline_stage),
+           pipeline_stage = $7,
            follow_up_date = $8,
            next_action = $9,
-           deal_value = COALESCE($10, deal_value),
+           deal_value = $10,
            notes = $11,
            updated_at = now()
          WHERE id = $12 AND organization_id = $13
          RETURNING *`,
         [
-          company_name ? company_name.trim() : null,
-          contact_person ? contact_person.trim() : null,
-          email ? email.trim().toLowerCase() : null,
-          phone !== undefined ? phone : null,
-          lead_source || null,
-          lead_owner_id !== undefined ? (lead_owner_id || null) : null,
-          pipeline_stage && PIPELINE_STAGES.includes(pipeline_stage) ? pipeline_stage : null,
-          follow_up_date !== undefined ? (follow_up_date || null) : null,
-          next_action !== undefined ? next_action : null,
-          deal_value !== undefined ? Number(deal_value) : null,
-          notes !== undefined ? notes : null,
+          newCompanyName,
+          newContactPerson,
+          newEmail,
+          newPhone,
+          newLeadSource,
+          newLeadOwnerId,
+          newPipelineStage,
+          newFollowUpDate,
+          newNextAction,
+          newDealValue,
+          newNotes,
           clientId,
           orgId,
         ]

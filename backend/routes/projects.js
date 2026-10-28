@@ -50,14 +50,15 @@ function createProjectsRoutes({ poolProvider = getPool } = {}) {
           owner.full_name AS owner_name,
           owner.avatar AS owner_avatar,
           (
-            SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+            SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.organization_id = $1
           ) AS total_tasks,
           (
-            SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.crm_status = 'done'
+            SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.organization_id = $1 AND t.crm_status = 'done'
           ) AS completed_tasks,
           (
             SELECT COUNT(*) FROM tasks t 
             WHERE t.project_id = p.id 
+              AND t.organization_id = $1
               AND t.due_date IS NOT NULL 
               AND t.due_date < CURRENT_DATE 
               AND t.crm_status != 'done'
@@ -109,11 +110,11 @@ function createProjectsRoutes({ poolProvider = getPool } = {}) {
       const { rows } = await pool.query(query, [projId, orgId]);
       if (rows.length === 0) return res.status(404).json({ error: 'Project not found.' });
 
-      // Fetch project tasks
+      // Fetch project tasks — scoped to the same organization for tenant isolation
       const tasksRes = await pool.query(
         `SELECT id, task_code, title, crm_status, crm_priority, due_date, completion_percentage
-         FROM tasks WHERE project_id = $1 ORDER BY created_at DESC`,
-        [projId]
+         FROM tasks WHERE project_id = $1 AND organization_id = $2 ORDER BY created_at DESC`,
+        [projId, orgId]
       );
 
       return res.json({ project: rows[0], tasks: tasksRes.rows });
@@ -166,30 +167,44 @@ function createProjectsRoutes({ poolProvider = getPool } = {}) {
       const pool = poolProvider();
       const orgId = req.user.organization_id;
 
+      const existingRes = await pool.query('SELECT * FROM projects WHERE id = $1 AND organization_id = $2', [projId, orgId]);
+      if (existingRes.rows.length === 0) return res.status(404).json({ error: 'Project not found.' });
+      const existing = existingRes.rows[0];
+
+      const newName = name ? name.trim() : existing.name;
+      const newDescription = description !== undefined ? description : existing.description;
+      const newClientId = client_id !== undefined ? (client_id || null) : existing.client_id;
+      const newOwnerId = owner_id || existing.owner_id;
+      const newStatus = status || existing.status;
+      const newHealth = health || existing.health;
+      const newStartDate = start_date !== undefined ? (start_date || null) : existing.start_date;
+      const newEndDate = end_date !== undefined ? (end_date || null) : existing.end_date;
+      const newBudget = budget !== undefined ? Number(budget) : existing.budget;
+
       const { rows } = await pool.query(
         `UPDATE projects SET
-           name = COALESCE($1, name),
-           description = COALESCE($2, description),
+           name = $1,
+           description = $2,
            client_id = $3,
-           owner_id = COALESCE($4, owner_id),
-           status = COALESCE($5, status),
-           health = COALESCE($6, health),
+           owner_id = $4,
+           status = $5,
+           health = $6,
            start_date = $7,
            end_date = $8,
-           budget = COALESCE($9, budget),
+           budget = $9,
            updated_at = now()
          WHERE id = $10 AND organization_id = $11
          RETURNING *`,
         [
-          name ? name.trim() : null,
-          description !== undefined ? description : null,
-          client_id !== undefined ? (client_id || null) : null,
-          owner_id || null,
-          status || null,
-          health || null,
-          start_date !== undefined ? (start_date || null) : null,
-          end_date !== undefined ? (end_date || null) : null,
-          budget !== undefined ? Number(budget) : null,
+          newName,
+          newDescription,
+          newClientId,
+          newOwnerId,
+          newStatus,
+          newHealth,
+          newStartDate,
+          newEndDate,
+          newBudget,
           projId,
           orgId,
         ]
