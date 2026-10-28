@@ -4,6 +4,7 @@ import FilterBar from './components/FilterBar';
 import TaskList from './components/TaskList';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
+import TaskDetailDrawer from './components/TaskDetailDrawer';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -19,6 +20,7 @@ export default function App() {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [selectedTask, setSelectedTask] = useState(null);
   const searchInputRef = useRef(null);
 
   const loadTasks = useCallback(async () => {
@@ -81,6 +83,7 @@ export default function App() {
     setSearch('');
     setOverdueOnly(false);
   }, []);
+  const closeTaskDetails = useCallback(() => setSelectedTask(null), []);
   const navigate = (page) => {
     setActivePage(page);
     setMobileNavOpen(false);
@@ -184,13 +187,14 @@ export default function App() {
               <section className="task-section">
                 <div className="section-heading task-section-heading"><div><h2>{activePage === 'overview' ? 'Priority tasks' : currentTitle[0]}</h2><p>{filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'} {filterActive ? 'matching your filters' : 'sorted by priority'}</p></div><div className="view-toggle" role="group" aria-label="Task view"><button className={view === 'list' ? 'is-selected' : ''} onClick={() => setView('list')} aria-pressed={view === 'list'}><span aria-hidden="true">☷</span>List</button><button className={view === 'board' ? 'is-selected' : ''} onClick={() => setView('board')} aria-pressed={view === 'board'}><span aria-hidden="true">▦</span>Board</button></div></div>
                 <FilterBar tasks={tasks} search={search} employeeFilter={employeeFilter} statusFilter={statusFilter} priorityFilter={priorityFilter} sourceFilter={sourceFilter} onSearchChange={setSearch} onEmployeeChange={setEmployeeFilter} onStatusChange={setStatusFilter} onPriorityChange={setPriorityFilter} onSourceChange={setSourceFilter} onReset={clearFilters} />
-                {loading ? <LoadingSpinner /> : error ? <ErrorMessage error={error} onRetry={loadTasks} /> : <TaskList tasks={filteredTasks} view={view} hasFilters={filterActive} onReset={clearFilters} />}
+                {loading ? <LoadingSpinner /> : error ? <ErrorMessage error={error} onRetry={loadTasks} /> : <TaskList tasks={filteredTasks} view={view} hasFilters={filterActive} onReset={clearFilters} onSelectTask={setSelectedTask} />}
               </section>
             </>
           )}
         </main>
         <footer className="app-footer"><span>TaskFlow</span><span>One clear view of your team’s work</span><span>CRM + Helpdesk</span></footer>
       </div>
+      {selectedTask && <TaskDetailDrawer task={selectedTask} onClose={closeTaskDetails} />}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import EmptyState from './EmptyState';
  * TaskList — renders the prioritised, filtered list of tasks.
  * Falls back to EmptyState when no tasks match the current filters.
  */
-export default function TaskList({ tasks, view, hasFilters, onReset }) {
+export default function TaskList({ tasks, view, hasFilters, onReset, onSelectTask }) {
   if (tasks.length === 0) {
     return <EmptyState hasFilters={hasFilters} onReset={onReset} />;
   }
@@ -21,12 +21,12 @@ export default function TaskList({ tasks, view, hasFilters, onReset }) {
       const columnTasks = tasks.filter((task) => task.status === status);
       return <section className="board-column" key={status} aria-label={`${title}: ${columnTasks.length} tasks`}>
         <header className="board-column__header"><span className={`column-dot column-dot--${status}`} />{title}<span className="column-count">{columnTasks.length}</span></header>
-        <div className="board-column__items">{columnTasks.map((task) => <TaskCard key={task.id} task={task} view="board" />)}</div>
+        <div className="board-column__items">{columnTasks.map((task) => <TaskCard key={task.id} task={task} view="board" onViewDetails={onSelectTask} />)}</div>
       </section>;
     })}</div>;
   }
 
   return (
-    <div className="task-list-wrap"><div className="task-list-head" aria-hidden="true"><span>Task</span><span>Assignee</span><span>Priority</span><span>Status</span><span>Due date</span></div><div className="task-list" role="list" aria-label={`${tasks.length} tasks`}>{tasks.map((task) => <TaskCard key={task.id} task={task} />)}</div></div>
+    <div className="task-list-wrap"><div className="task-list-head" aria-hidden="true"><span>Task</span><span>Assignee</span><span>Priority</span><span>Status</span><span>Due date</span></div><div className="task-list" role="list" aria-label={`${tasks.length} tasks`}>{tasks.map((task) => <TaskCard key={task.id} task={task} onViewDetails={onSelectTask} />)}</div></div>
   );
 }

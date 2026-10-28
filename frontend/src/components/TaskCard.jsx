@@ -2,7 +2,7 @@ import React from 'react';
 import StatusBadge from './StatusBadge';
 import UrgencyBadge from './UrgencyBadge';
 
-export default function TaskCard({ task, view = 'list' }) {
+export default function TaskCard({ task, view = 'list', onViewDetails }) {
   const { id, title, employee, status, deadline, urgency, source, sourceUrl, daysFromToday } = task;
   const isOverdue = daysFromToday < 0 && status !== 'completed';
   const isToday = daysFromToday === 0;
@@ -18,7 +18,7 @@ export default function TaskCard({ task, view = 'list' }) {
       <div className="task-main">
         <span className={`source-mark source-mark--${sourceKey}`} aria-hidden="true">{source === 'CRM' ? 'C' : 'H'}</span>
         <div className="task-title-wrap">
-          <a className="task-title" href={sourceUrl} target="_blank" rel="noreferrer" title={`Open in ${source}`}>{title}<span aria-hidden="true">↗</span></a>
+          <button className="task-title" type="button" onClick={() => onViewDetails(task)} aria-label={`View details for ${title}`} title="View task details">{title}<span aria-hidden="true">›</span></button>
           <span className="task-id">{id} <span className="task-source-inline">· {source}</span></span>
         </div>
       </div>
