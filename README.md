@@ -11,7 +11,7 @@ A responsive team task dashboard that aggregates tasks from two read-only mock R
 | Layer    | Technology                     |
 |----------|--------------------------------|
 | Frontend | React 19 + Vite 8              |
-| Backend  | Node.js + Express 4            |
+| Backend  | Node.js + Express 4 + PostgreSQL (`pg`) |
 | Language | JavaScript (ES Modules)        |
 | Styling  | Vanilla CSS (custom design system) |
 
@@ -22,9 +22,16 @@ A responsive team task dashboard that aggregates tasks from two read-only mock R
 ```
 employee-task-dashboard/
 ├── backend/
+│   ├── db/
+│   │   ├── migrations/         # Version-controlled PostgreSQL schema
+│   │   ├── migrate.js          # Migration runner
+│   │   └── pool.js             # PostgreSQL connection and readiness probe
+│   ├── scripts/migrate.js      # `npm run db:migrate`
 │   ├── package.json
 │   ├── server.js              # Express server (port 3001)
-│   ├── test/api.test.js        # API, CORS, security-header, and read-only tests
+│   ├── test/
+│   │   ├── api.test.js         # API, CORS, security-header, and read-only tests
+│   │   └── database.test.js    # Isolated migration, schema, and readiness tests
 │   └── routes/
 │       ├── crm.js             # GET /api/crm/tasks
 │       └── helpdesk.js        # GET /api/helpdesk/tasks
@@ -60,13 +67,13 @@ employee-task-dashboard/
 ## Installation & Setup
 
 ### Prerequisites
-- Node.js ≥ 18
+- Node.js ≥ 20.19 (required by the current Vite 8 toolchain)
 - npm ≥ 9
 
 ### 1 — Install backend dependencies
 ```bash
 cd backend
-npm install
+npm ci
 ```
 
 ### 2 — Install frontend dependencies
@@ -109,11 +116,68 @@ The backend exposes `GET /api/crm/tasks`, `GET /api/helpdesk/tasks`, and `GET /a
 
 Task records include `id`, `title`, `employee`, `status`, `deadline`, `urgency`, `source`, and `sourceUrl`. The mock CRM and Helpdesk source URLs use placeholder domains and are shown as unavailable rather than opened; legitimate source URLs are preserved. The current response does not include creation or completion timestamps or historical snapshots. Team Analytics labels those trends unavailable instead of deriving them from deadlines. Current workload, overdue, and completion-rate figures are snapshots of fetched records; completed tasks are excluded from overdue counts.
 
+## PostgreSQL Foundation (Phase 1)
+
+The backend now has a PostgreSQL connection pool and a version-controlled initial schema migration. This phase deliberately does **not** move existing mock records into PostgreSQL or add task write endpoints: the current dashboard continues to read the same mock GET routes. It also does not add authentication or authorization. The schema's organization/user relationships and role values are data foundations, not access controls; do not use this deployment for real employee data yet.
+
+The schema creates:
+
+- `organizations` with a unique lowercase slug.
+- `users` scoped to an organization, with normalized lowercase email and a constrained role value (`owner`, `admin`, or `member`).
+- `tasks` scoped to an organization and creator, with constrained status/priority and optional due date.
+- `task_assignments` with organization-scoped foreign keys and one row per task/user assignment.
+
+The tables use UUID identifiers, foreign keys, created/updated timestamps, and indexes for organization, status, due date, creation date, and assignee queries. The migration is [001_create_taskflow_core.sql](./backend/db/migrations/001_create_taskflow_core.sql). Later application updates must set `updated_at` when modifying records.
+
+### Managed PostgreSQL and local configuration
+
+Neon is compatible with the standard PostgreSQL wire protocol and the `pg` client used here. A Neon free plan may be suitable for development, but check its current limits and terms before relying on it; this repository cannot confirm hosting-plan availability. Render's backend can connect to any managed PostgreSQL provider using the same connection variable.
+
+1. Create a development PostgreSQL database (for example, a Neon project) and obtain its connection string. Use the pooled connection string for a serverless/hosted backend when the provider recommends it; Neon connection strings should include `sslmode=require`.
+2. Set `DATABASE_URL` in the backend process environment. A placeholder-only template is at [backend/.env.example](./backend/.env.example). Never commit a real connection string or put it in a frontend `VITE_*` variable.
+3. In PowerShell, set the value only in the current terminal session, replacing the placeholder with your own **development** database URL:
+
+   ```powershell
+   $env:DATABASE_URL = "postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+   ```
+
+4. Apply migrations only to the intended development database:
+
+   ```powershell
+   cd backend
+   npm run db:migrate
+   ```
+
+The migration runner applies numbered `.sql` files once and records them in `schema_migrations`. Run it as a controlled deployment step when a database is ready; this change does not configure automatic Render migrations and no production migration was run.
+
+### Database connection and health checks
+
+- `GET /api/health` remains a process liveness response and preserves the existing response shape.
+- `GET /api/ready` runs `SELECT 1` against PostgreSQL. It returns `200` with `database: "available"` only when `DATABASE_URL` is configured and the database answers; otherwise it returns `503` and a non-secret reason (`not_configured` or `unavailable`).
+- The database connection is optional during server startup so the existing read-only dashboard remains available while Phase 1 is rolled out. The readiness check intentionally remains unavailable until a database is configured.
+
+### Tests
+
+Backend tests use `pg-mem` to create an isolated, in-memory PostgreSQL-compatible database; they do not require a live database or touch a hosted one. They exercise migration application, constraints, organization-scoped foreign keys, assignment uniqueness, the connection probe, and readiness responses. The in-memory adapter is not a substitute for one integration run against the actual PostgreSQL provider before relying on the schema in production.
+
+```powershell
+cd backend
+npm test
+```
+
+Run the frontend regression tests and production build as before:
+
+```powershell
+cd frontend
+npm test
+npm run build
+```
+
 ## Environment and Deployment
 
 For Vercel, set the frontend root directory to `frontend` and define `VITE_API_BASE_URL` as the backend origin (for example, `https://employee-task-dashboard-g2ug.onrender.com`, without `/api`). Vite embeds this value at build time. The frontend keeps `/api` as a development fallback for the Vite proxy.
 
-For Render, set the backend root directory to `backend`, the build command to `npm ci`, and the start command to `npm start`. The Express CORS allowlist includes the production TaskFlow origin and local Vite origins; browser requests are limited to GET. Do not configure credentials or write permissions: this service has no authenticated persistence layer.
+For Render, set the backend root directory to `backend`, the build command to `npm ci`, and the start command to `npm start`. Configure `DATABASE_URL` as a secret environment variable in Render only when a managed database is ready. Do not run `npm run db:migrate` against a production database until the migration has first been reviewed and tested against a separate PostgreSQL database and a backup/rollback plan exists. No production settings were changed. The Express CORS allowlist remains configured for the current Vercel origin and local Vite origins.
 
 Run checks from the repository root:
 
@@ -158,6 +222,9 @@ Response shape is identical to CRM, with `source: "Helpdesk"`.
 
 ### `GET /api/health`
 Simple health check: `{ "status": "ok", "timestamp": "..." }`
+
+### `GET /api/ready`
+Database readiness check: HTTP 200 when PostgreSQL is reachable, otherwise HTTP 503. The response does not disclose connection details.
 
 ---
 
