@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3001;
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://employee-task-dashboard-chivel.vercel.app',
+  'https://employee-task-dashboard-chi.vercel.app',
 ];
 
 // ─── Middleware ──────────────────────────────────────────────────────────────

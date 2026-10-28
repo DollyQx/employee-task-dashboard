@@ -4,7 +4,7 @@ const { once } = require('node:events');
 
 const app = require('../server');
 
-const productionOrigin = 'https://employee-task-dashboard-chivel.vercel.app';
+const productionOrigin = 'https://employee-task-dashboard-chi.vercel.app';
 let server;
 let baseUrl;
 
