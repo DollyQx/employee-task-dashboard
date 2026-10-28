@@ -148,7 +148,6 @@ Returns 8 mock CRM tasks (client follow-ups, proposals, renewals).
       "sourceUrl": "https://example-crm.com/tasks/crm-001"
     }
   ]
-  ]
 }
 ```
 
