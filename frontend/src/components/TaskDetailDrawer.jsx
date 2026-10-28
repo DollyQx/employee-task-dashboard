@@ -96,6 +96,7 @@ export default function TaskDetailDrawer({ task, onClose }) {
 
           <p className="task-drawer__readonly">{sourceLabel} tasks are read-only in TaskFlow. Make changes in the original source when available.</p>
           {originalTaskUrl && <a className="task-drawer__original-link" href={originalTaskUrl} target="_blank" rel="noopener noreferrer">Open original task <span aria-hidden="true">↗</span></a>}
+          {!originalTaskUrl && <p className="task-drawer__readonly" role="status">Original task link unavailable.</p>}
         </div>
       </aside>
     </div>

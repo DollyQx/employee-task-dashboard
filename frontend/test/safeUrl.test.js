@@ -5,6 +5,9 @@ import { safeExternalUrl } from '../src/utils/safeUrl.js';
 test('safe external links allow absolute HTTP(S) source URLs only', () => {
   assert.equal(safeExternalUrl('https://example.test/task/1'), 'https://example.test/task/1');
   assert.equal(safeExternalUrl('http://example.test/task/1'), 'http://example.test/task/1');
+  assert.equal(safeExternalUrl('https://crm.acme.test/task/1'), 'https://crm.acme.test/task/1');
+  assert.equal(safeExternalUrl('https://example-crm.com/tasks/crm-001'), null);
+  assert.equal(safeExternalUrl('https://example-helpdesk.com/tickets/hd-001'), null);
   assert.equal(safeExternalUrl('javascript:alert(1)'), null);
   assert.equal(safeExternalUrl('//example.test/task/1'), null);
   assert.equal(safeExternalUrl('not a url'), null);

@@ -107,7 +107,7 @@ Open your browser at **http://localhost:5173**
 
 The backend exposes `GET /api/crm/tasks`, `GET /api/helpdesk/tasks`, and `GET /api/health`. CRM and Helpdesk records are demonstration data held in route modules. There is no database, authentication/authorization model, or write integration. Create, edit, delete, bulk update, and persistent status changes are intentionally not offered. Use **Open original task** in the detail drawer only where the source URL is available.
 
-Task records include `id`, `title`, `employee`, `status`, `deadline`, `urgency`, `source`, and `sourceUrl`. The current response does not include creation or completion timestamps or historical snapshots. Team Analytics labels those trends unavailable instead of deriving them from deadlines. Current workload, overdue, and completion-rate figures are snapshots of fetched records; completed tasks are excluded from overdue counts.
+Task records include `id`, `title`, `employee`, `status`, `deadline`, `urgency`, `source`, and `sourceUrl`. The mock CRM and Helpdesk source URLs use placeholder domains and are shown as unavailable rather than opened; legitimate source URLs are preserved. The current response does not include creation or completion timestamps or historical snapshots. Team Analytics labels those trends unavailable instead of deriving them from deadlines. Current workload, overdue, and completion-rate figures are snapshots of fetched records; completed tasks are excluded from overdue counts.
 
 ## Environment and Deployment
 
