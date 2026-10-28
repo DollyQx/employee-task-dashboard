@@ -18,8 +18,8 @@ export default function NotificationsView({
     <div className="notifications-view">
       <div className="view-header">
         <div>
-          <h2>Plant Dispatch & Shift Alerts</h2>
-          <p>Machinery telemetry alarms, metrology sign-offs, and critical safety notifications</p>
+          <h2>Notifications & Alerts</h2>
+          <p>Task updates, assignment notices, and deadline alerts across your projects</p>
         </div>
         {unreadCount > 0 && onMarkAllRead && (
           <button type="button" className="button button--secondary" onClick={onMarkAllRead}>
@@ -34,7 +34,7 @@ export default function NotificationsView({
           className={`tab-btn${filter === 'all' ? ' is-active' : ''}`}
           onClick={() => setFilter('all')}
         >
-          All Alerts ({notifications.length})
+          All Notifications ({notifications.length})
         </button>
         <button
           type="button"
@@ -48,7 +48,7 @@ export default function NotificationsView({
       <div className="notifications-list">
         {filtered.length === 0 ? (
           <div className="empty-state">
-            <p>You're all caught up! No active alarms or unread alerts.</p>
+            <p>You're all caught up! No unread notifications.</p>
           </div>
         ) : (
           filtered.map((notif) => {

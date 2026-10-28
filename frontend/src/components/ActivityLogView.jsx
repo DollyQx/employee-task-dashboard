@@ -19,8 +19,8 @@ export default function ActivityLogView({ auditLogs = [], onRefresh, loading = f
     <div className="activity-view">
       <div className="view-header">
         <div>
-          <h2>Shopfloor Audit & Traceability Log</h2>
-          <p>ISO 9001 quality sign-offs, work order status transitions, and safety audit trail</p>
+          <h2>Activity Log & Audit Trail</h2>
+          <p>System audit trail of task transitions, status changes, and user actions</p>
         </div>
         <button type="button" className="button button--secondary" onClick={onRefresh} disabled={loading}>
           {loading ? 'Refreshing...' : '🔄 Refresh Log'}
@@ -40,11 +40,11 @@ export default function ActivityLogView({ auditLogs = [], onRefresh, loading = f
 
         <select value={filterAction} onChange={(e) => setFilterAction(e.target.value)}>
           <option value="all">All Actions</option>
-          <option value="CREATE_TASK">CREATE_WORK_ORDER</option>
-          <option value="UPDATE_TASK">UPDATE_WORK_ORDER</option>
+          <option value="CREATE_TASK">CREATE_TASK</option>
+          <option value="UPDATE_TASK">UPDATE_TASK</option>
           <option value="UPDATE_STATUS">UPDATE_STATUS</option>
-          <option value="VERIFY_METROLOGY_REPORT">VERIFY_METROLOGY_REPORT</option>
-          <option value="SCHEDULE_SHIFT_WORK_ORDERS">SCHEDULE_SHIFT_WORK_ORDERS</option>
+          <option value="VERIFY_QA_REPORT">VERIFY_QA_REPORT</option>
+          <option value="SCHEDULE_TASKS">SCHEDULE_TASKS</option>
           <option value="APPROVE_MATERIAL_REQUISITION">APPROVE_MATERIAL_REQUISITION</option>
           <option value="LOG_PREVENTIVE_MAINTENANCE">LOG_PREVENTIVE_MAINTENANCE</option>
           <option value="EHS_SAFETY_INSPECTION_PASS">EHS_SAFETY_INSPECTION_PASS</option>
@@ -56,10 +56,10 @@ export default function ActivityLogView({ auditLogs = [], onRefresh, loading = f
           <thead>
             <tr>
               <th>Timestamp</th>
-              <th>Plant Specialist</th>
+              <th>User</th>
               <th>Action</th>
-              <th>Target Asset / Order</th>
-              <th>Audit Trail Details</th>
+              <th>Target Entity</th>
+              <th>Details</th>
             </tr>
           </thead>
           <tbody>
@@ -80,9 +80,9 @@ export default function ActivityLogView({ auditLogs = [], onRefresh, loading = f
                 return (
                   <tr key={log.id}>
                     <td className="log-time">{date}</td>
-                    <td><strong>{log.user_name || log.actor_name || 'Plant Supervisor'}</strong></td>
+                    <td><strong>{log.user_name || log.actor_name || 'System User'}</strong></td>
                     <td><span className={`action-badge ${actionClass}`}>{log.action}</span></td>
-                    <td><span className="entity-tag">{log.entity_id || log.entity_type || 'WO-501'}</span></td>
+                    <td><span className="entity-tag">{log.entity_id || log.entity_type || 'TASK'}</span></td>
                     <td className="log-details">
                       <code>{typeof log.details === 'object' ? JSON.stringify(log.details) : (log.details || '—')}</code>
                     </td>

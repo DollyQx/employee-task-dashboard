@@ -12,7 +12,7 @@ export default function FilterBar({
   onEmployeeChange,
   onStatusChange,
   onPriorityChange,
-  onSourceChange,
+  _onSourceChange,
   onOverdueChange,
   onReset,
 }) {
@@ -30,7 +30,7 @@ export default function FilterBar({
         <span aria-hidden="true">🔍</span>
         <input
           aria-label="Search task list"
-          placeholder="Filter by work order, machine asset, or keyword..."
+          placeholder="Filter by title, project, or keyword..."
           value={search}
           onChange={(event) => onSearchChange(event.target.value)}
         />
@@ -42,7 +42,7 @@ export default function FilterBar({
         onChange={(e) => onEmployeeChange(e.target.value)}
         aria-label="Assignee"
       >
-        <option value="all">All Specialists ({employees.length})</option>
+        <option value="all">All Assignees ({employees.length})</option>
         {hasUnassigned && <option value="__unassigned__">Unassigned</option>}
         {employees.map((name) => (
           <option key={name} value={name}>{name}</option>
@@ -55,10 +55,10 @@ export default function FilterBar({
         onChange={(e) => onStatusChange(e.target.value)}
         aria-label="Status"
       >
-        <option value="all">All Floor Statuses</option>
-        <option value="pending">Shift Queue / Pending</option>
-        <option value="in-progress">In Machining / Progress</option>
-        <option value="completed">Completed / Dispatched</option>
+        <option value="all">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="in-progress">In Progress</option>
+        <option value="completed">Completed</option>
       </select>
       <select
         id="priority-filter"
@@ -67,11 +67,11 @@ export default function FilterBar({
         onChange={(event) => onPriorityChange(event.target.value)}
         aria-label="Priority"
       >
-        <option value="all">All Criticality Levels</option>
-        <option value="urgent">🔴 Urgent / Critical</option>
-        <option value="high">🟠 High Priority</option>
-        <option value="medium">🟡 Standard Shift</option>
-        <option value="low">🟢 Routine</option>
+        <option value="all">All Priorities</option>
+        <option value="urgent">🔴 Urgent</option>
+        <option value="high">🟠 High</option>
+        <option value="medium">🟡 Medium</option>
+        <option value="low">🟢 Low</option>
       </select>
       <label className="overdue-filter">
         <input

@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import StatusBadge from './StatusBadge';
-import UrgencyBadge from './UrgencyBadge';
 import { daysFromToday, isTaskOverdue } from '../utils/taskMetrics';
 import { safeExternalUrl } from '../utils/safeUrl';
 import { fetchTaskCommentsApi, addTaskCommentApi, patchTaskStatusApi } from '../api/crm';
@@ -33,8 +31,6 @@ export default function TaskDetailDrawer({
   const [loadingComments, setLoadingComments] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [statusVal, setStatusVal] = useState(task?.crm_status || task?.status || 'todo');
-
-  const isDatabaseTask = Boolean(task?.task_code || task?.crm_status || task?.organization_id || task?.id);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement;
@@ -136,9 +132,9 @@ export default function TaskDetailDrawer({
         <header className="task-drawer__header">
           <div>
             <p className="task-drawer__eyebrow">
-              {task.task_code || 'WORK ORDER'} • {task.department_name || 'Plant Operations'}
+              {task.task_code || 'TASK'} • {task.department_name || 'General'}
             </p>
-            <h2 id="task-drawer-title">{task.title || 'Untitled Work Order'}</h2>
+            <h2 id="task-drawer-title">{task.title || 'Untitled Task'}</h2>
           </div>
           <div className="drawer-header-actions">
             {onEditTask && (
@@ -155,7 +151,7 @@ export default function TaskDetailDrawer({
                 type="button"
                 className="button button--secondary button--sm text-red"
                 onClick={() => onDeleteTask(task.id)}
-                title="Delete work order"
+                title="Delete task"
               >
                 🗑️
               </button>
@@ -175,32 +171,32 @@ export default function TaskDetailDrawer({
         <div className="task-drawer__content">
           {task.description && (
             <div className="task-drawer__desc-box">
-              <h4>Technical Specifications & Acceptance Criteria</h4>
+              <h4>Description & Specifications</h4>
               <p>{task.description}</p>
             </div>
           )}
 
           <dl className="task-detail-list">
             <div className="task-detail-row">
-              <dt>Floor Status</dt>
+              <dt>Status</dt>
               <dd>
                 <select
                   className="drawer-status-select"
                   value={statusVal}
                   onChange={handleStatusChange}
                 >
-                  <option value="backlog">Backlog / Planned</option>
-                  <option value="todo">Shift Queue</option>
-                  <option value="in_progress">In Machining</option>
-                  <option value="in_review">QA & Metrology Review</option>
-                  <option value="blocked">Maintenance Hold</option>
-                  <option value="done">Completed & Dispatched</option>
+                  <option value="backlog">Backlog</option>
+                  <option value="todo">To Do</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="in_review">In Review</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="done">Completed</option>
                 </select>
               </dd>
             </div>
 
             <div className="task-detail-row">
-              <dt>Criticality / Urgency</dt>
+              <dt>Priority</dt>
               <dd>
                 <span className={`priority-pill priority-pill--${task.crm_priority || task.urgency || 'medium'}`}>
                   {(task.crm_priority || task.urgency || 'medium').toUpperCase()}
@@ -210,32 +206,32 @@ export default function TaskDetailDrawer({
 
             {task.asset && (
               <div className="task-detail-row">
-                <dt>Machinery / Asset</dt>
+                <dt>Resource / Asset</dt>
                 <dd><strong>🔧 {task.asset}</strong></dd>
               </div>
             )}
 
             {task.batch_no && (
               <div className="task-detail-row">
-                <dt>Material Heat / Batch</dt>
+                <dt>Reference Code</dt>
                 <dd><code>{task.batch_no}</code></dd>
               </div>
             )}
 
             <div className="task-detail-row">
-              <dt>Shopfloor Division</dt>
-              <dd>{task.department_name || 'Plant Operations & Production'}</dd>
+              <dt>Department</dt>
+              <dd>{task.department_name || 'General'}</dd>
             </div>
 
             {task.project_name && (
               <div className="task-detail-row">
-                <dt>OEM Project</dt>
+                <dt>Project</dt>
                 <dd>📁 {task.project_name}</dd>
               </div>
             )}
 
             <div className="task-detail-row">
-              <dt>Lead Specialist</dt>
+              <dt>Assignee</dt>
               <dd>
                 <strong>{task.employee || task.assignees?.[0]?.full_name || 'Unassigned'}</strong>
               </dd>
@@ -255,14 +251,14 @@ export default function TaskDetailDrawer({
 
             {task.estimated_hours > 0 && (
               <div className="task-detail-row">
-                <dt>Standard Cycle Time</dt>
+                <dt>Estimated Hours</dt>
                 <dd>{task.estimated_hours} Hours</dd>
               </div>
             )}
 
             {task.tags && (
               <div className="task-detail-row">
-                <dt>Process Tags</dt>
+                <dt>Tags</dt>
                 <dd className="drawer-tags">
                   {task.tags.split(',').map((t, idx) => (
                     <span key={idx} className="drawer-tag">#{t.trim()}</span>
@@ -273,30 +269,30 @@ export default function TaskDetailDrawer({
 
             {originalTaskUrl && (
               <div className="task-detail-row">
-                <dt>External Work Order</dt>
+                <dt>External Reference</dt>
                 <dd>
                   <a href={originalTaskUrl} target="_blank" rel="noopener noreferrer">
-                    Open SCADA Reference ↗
+                    Open External Link ↗
                   </a>
                 </dd>
               </div>
             )}
           </dl>
 
-          {/* Comments and Engineering Notes Section */}
+          {/* Comments and Notes Section */}
           <div className="drawer-comments-section">
-            <h4>Engineering Shift Notes & QA Comments ({comments.length})</h4>
+            <h4>Task Notes & Comments ({comments.length})</h4>
             <div className="comments-list">
               {loadingComments ? (
                 <p className="subtle-note">Loading comments...</p>
               ) : comments.length === 0 ? (
-                <p className="subtle-note">No comments logged for this work order yet.</p>
+                <p className="subtle-note">No comments logged for this task yet.</p>
               ) : (
                 comments.map((c) => (
                   <div key={c.id} className="comment-item">
                     <div className="comment-header">
                       <span className="mini-avatar">{c.user_avatar || (c.user_name ? c.user_name.substring(0, 2).toUpperCase() : 'AS')}</span>
-                      <strong>{c.user_name || 'Floor Specialist'}</strong>
+                      <strong>{c.user_name || 'Team Member'}</strong>
                       <span className="comment-time">
                         {c.created_at ? new Date(c.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
                       </span>
@@ -310,7 +306,7 @@ export default function TaskDetailDrawer({
             <form onSubmit={handleAddComment} className="add-comment-form">
               <input
                 type="text"
-                placeholder="Log shift observation or metrology update..."
+                placeholder="Add a comment or update..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 disabled={submittingComment}
@@ -320,7 +316,7 @@ export default function TaskDetailDrawer({
                 className="button button--primary button--sm"
                 disabled={submittingComment || !newComment.trim()}
               >
-                {submittingComment ? 'Logging...' : 'Post Note'}
+                {submittingComment ? 'Posting...' : 'Post Comment'}
               </button>
             </form>
           </div>

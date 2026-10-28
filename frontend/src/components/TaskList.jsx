@@ -3,7 +3,7 @@ import TaskCard from './TaskCard';
 import EmptyState from './EmptyState';
 
 /**
- * TaskList — renders the prioritised, filtered list of tasks / work orders.
+ * TaskList — renders the prioritised, filtered list of tasks.
  * Falls back to EmptyState when no tasks match the current filters.
  */
 export default function TaskList({ tasks, view, hasFilters, onReset, onSelectTask }) {
@@ -16,9 +16,9 @@ export default function TaskList({ tasks, view, hasFilters, onReset, onSelectTas
     const unknownStatuses = [...new Set(tasks.map((task) => task.status || 'unknown'))]
       .filter((status) => !knownStatuses.includes(status));
     const columns = [
-      ['pending', 'Shift Queue'],
-      ['in-progress', 'In Machining'],
-      ['completed', 'Completed / Dispatched'],
+      ['pending', 'To Do'],
+      ['in-progress', 'In Progress'],
+      ['completed', 'Completed'],
       ...unknownStatuses.map((status) => [status, 'Other Status']),
     ];
     return (
@@ -47,13 +47,13 @@ export default function TaskList({ tasks, view, hasFilters, onReset, onSelectTas
   return (
     <div className="task-list-wrap">
       <div className="task-list-head" aria-hidden="true">
-        <span>Work Order & Asset</span>
-        <span>Specialist</span>
-        <span>Criticality</span>
-        <span>Floor Status</span>
-        <span>Target Date</span>
+        <span>Task Details</span>
+        <span>Assignee</span>
+        <span>Priority</span>
+        <span>Status</span>
+        <span>Due Date</span>
       </div>
-      <div className="task-list" role="list" aria-label={`${tasks.length} work orders`}>
+      <div className="task-list" role="list" aria-label={`${tasks.length} tasks`}>
         {tasks.map((task) => (
           <TaskCard key={task.id} task={task} onViewDetails={onSelectTask} />
         ))}

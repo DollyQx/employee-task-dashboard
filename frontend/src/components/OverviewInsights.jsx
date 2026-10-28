@@ -19,7 +19,7 @@ function DistributionPanel({ title, items, onSelect, emptyLabel }) {
       <header className="analytics-panel__header">
         <div>
           <h2>{title}</h2>
-          <p>Plant shopfloor distribution</p>
+          <p>Task distribution breakdown</p>
         </div>
       </header>
       {items.length ? (
@@ -52,11 +52,11 @@ export default function OverviewInsights({ tasks, onApplyFilters }) {
   const distributions = useMemo(() => ({
     status: entriesFor(tasks, (task) => task.crm_status || task.status || 'unknown', (task) => {
       const s = task.crm_status || task.status;
-      if (s === 'in_progress' || s === 'in-progress') return 'In Machining';
-      if (s === 'todo' || s === 'pending') return 'Shift Queue';
-      if (s === 'in_review') return 'QA Review';
-      if (s === 'blocked') return 'Maintenance Hold';
-      if (s === 'done' || s === 'completed') return 'Completed / Dispatched';
+      if (s === 'in_progress' || s === 'in-progress') return 'In Progress';
+      if (s === 'todo' || s === 'pending') return 'To Do';
+      if (s === 'in_review') return 'In Review';
+      if (s === 'blocked') return 'Blocked';
+      if (s === 'done' || s === 'completed') return 'Completed';
       return 'Backlog';
     }).map((item) => ({ ...item, filter: { statusFilter: item.key } })),
     department: entriesFor(tasks, (task) => task.department_name || task.source || 'General', (task) => task.department_name || task.source || 'General')
@@ -70,24 +70,26 @@ export default function OverviewInsights({ tasks, onApplyFilters }) {
   }), [tasks]);
 
   return (
-    <section className="overview-insights" aria-label="Plant work order distribution">
+    <section className="overview-insights" aria-label="Task distribution insights">
       <header className="overview-insights__heading">
         <div>
-          <h2>Plant Operations & Floor Telemetry</h2>
+          <h2>Task Overview & Insights</h2>
           <p>
-            Current throughput • <strong>{metrics.completionRate}%</strong> completion rate ({metrics.completed} completed • {metrics.total} total work orders)
+            Overall progress • <strong>{metrics.completionRate}%</strong> completion rate ({metrics.completed} of {metrics.total} tasks completed)
           </p>
         </div>
       </header>
       <div className="overview-insights__grid">
-        <DistributionPanel title="By Shopfloor Status" items={distributions.status} onSelect={onApplyFilters} emptyLabel="No status data available." />
-        <DistributionPanel title="By Manufacturing Division" items={distributions.department} onSelect={onApplyFilters} emptyLabel="No division data available." />
-        <DistributionPanel title="By Safety & Urgency Level" items={distributions.priority} onSelect={onApplyFilters} emptyLabel="No priority data available." />
-        <DistributionPanel title="By Specialist Assignee" items={distributions.assignee} onSelect={onApplyFilters} emptyLabel="No assignee data available." />
+        <DistributionPanel title="By Status" items={distributions.status} onSelect={onApplyFilters} emptyLabel="No status data available." />
+        <DistributionPanel title="By Department" items={distributions.department} onSelect={onApplyFilters} emptyLabel="No department data available." />
+        <DistributionPanel title="By Priority" items={distributions.priority} onSelect={onApplyFilters} emptyLabel="No priority data available." />
+        <DistributionPanel title="By Assignee" items={distributions.assignee} onSelect={onApplyFilters} emptyLabel="No assignee data available." />
       </div>
-      <p className="overview-insights__overdue">
-        ⚠️ <strong>{metrics.overdue}</strong> critical work orders currently overdue • Requires floor supervisor review
-      </p>
+      {metrics.overdue > 0 && (
+        <p className="overview-insights__overdue">
+          ⚠️ <strong>{metrics.overdue}</strong> {metrics.overdue === 1 ? 'task is' : 'tasks are'} overdue • Requires attention
+        </p>
+      )}
     </section>
   );
 }

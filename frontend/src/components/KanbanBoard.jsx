@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 
 const COLUMNS = [
-  { id: 'backlog', label: 'Backlog / Planned', color: '#94a3b8' },
-  { id: 'todo', label: 'Shift Queue', color: '#38bdf8' },
-  { id: 'in_progress', label: 'In Machining', color: '#818cf8' },
-  { id: 'in_review', label: 'QA & Metrology', color: '#fbbf24' },
-  { id: 'blocked', label: 'Maintenance Hold', color: '#f87171' },
-  { id: 'done', label: 'Passed & Dispatched', color: '#34d399' },
+  { id: 'backlog', label: 'Backlog', color: '#64748B' },
+  { id: 'todo', label: 'To Do', color: '#0284C7' },
+  { id: 'in_progress', label: 'In Progress', color: '#2563EB' },
+  { id: 'in_review', label: 'In Review', color: '#D97706' },
+  { id: 'blocked', label: 'Blocked', color: '#DC2626' },
+  { id: 'done', label: 'Completed', color: '#16A34A' },
 ];
 
 export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, onNewTask }) {
@@ -40,7 +40,7 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
   };
 
   return (
-    <div className="kanban-wrapper" role="region" aria-label="Kanban work order board">
+    <div className="kanban-wrapper" role="region" aria-label="Kanban task board">
       <div className="kanban-board">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => (t.crm_status || 'todo') === col.id);
@@ -63,8 +63,8 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
                     type="button"
                     className="kanban-add-btn"
                     onClick={() => onNewTask({ crm_status: 'todo' })}
-                    title="Add work order in Shift Queue"
-                    aria-label="Add work order"
+                    title="Add task in To Do"
+                    aria-label="Add task"
                   >
                     +
                   </button>
@@ -74,7 +74,7 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
               <div className="kanban-column-cards">
                 {colTasks.length === 0 ? (
                   <div className="kanban-empty-dropzone">
-                    <span>No work orders in {col.label}</span>
+                    <span>No tasks in {col.label}</span>
                   </div>
                 ) : (
                   colTasks.map((task) => {
@@ -95,7 +95,7 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
                         onKeyDown={(e) => e.key === 'Enter' && onSelectTask(task)}
                       >
                         <div className="kanban-card-top">
-                          <span className="kanban-card-code">{task.task_code || task.id || 'WO'}</span>
+                          <span className="kanban-card-code">{task.task_code || task.id || 'TSK'}</span>
                           <span className={`priority-pill ${priorityClass}`}>
                             {task.crm_priority || task.urgency || 'medium'}
                           </span>
@@ -103,17 +103,15 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
 
                         <h4 className="kanban-card-title">{task.title}</h4>
 
-                        {task.asset && (
+                        {task.project_name ? (
                           <div className="kanban-card-asset">
-                            <span>🔧 {task.asset}</span>
+                            <span>📁 {task.project_name}</span>
                           </div>
-                        )}
-
-                        {task.project_name && (
-                          <div className="kanban-card-project">
-                            <span className="project-badge">📁 {task.project_name}</span>
+                        ) : task.asset ? (
+                          <div className="kanban-card-asset">
+                            <span>⚙ {task.asset}</span>
                           </div>
-                        )}
+                        ) : null}
 
                         {task.blocked_reason && col.id === 'blocked' && (
                           <div className="kanban-card-blocked">

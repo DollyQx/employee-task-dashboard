@@ -63,7 +63,7 @@ export default function CalendarView({ tasks = [], onSelectTask, onNewTask }) {
         </div>
         {onNewTask && (
           <button type="button" className="button button--primary" onClick={() => onNewTask()}>
-            + Schedule Work Order
+            + Schedule Task
           </button>
         )}
       </div>
@@ -124,8 +124,8 @@ export default function CalendarView({ tasks = [], onSelectTask, onNewTask }) {
           <div className="modal modal--emp-detail" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <h3>Scheduled Work Orders for {selectedDayTasks.date}</h3>
-                <p>{selectedDayTasks.tasks.length} operations allocated</p>
+                <h3>Tasks Due on {selectedDayTasks.date}</h3>
+                <p>{selectedDayTasks.tasks.length} {selectedDayTasks.tasks.length === 1 ? 'task' : 'tasks'} scheduled</p>
               </div>
               <button type="button" className="close-button" onClick={() => setSelectedDayTasks(null)}>
                 ✕
@@ -143,8 +143,8 @@ export default function CalendarView({ tasks = [], onSelectTask, onNewTask }) {
                     }}
                   >
                     <div>
-                      <strong>{t.task_code || 'WO'}: {t.title}</strong>
-                      <small>Specialist: {t.employee || 'Unassigned'} • {t.department_name || 'Plant Operations'}</small>
+                      <strong>{t.task_code || 'TSK'}: {t.title}</strong>
+                      <small>Assignee: {t.employee || 'Unassigned'} • {t.department_name || 'General'}</small>
                     </div>
                     <span className={`priority-pill priority-pill--${t.crm_priority || t.urgency || 'medium'}`}>
                       {t.crm_priority || t.urgency || 'medium'}

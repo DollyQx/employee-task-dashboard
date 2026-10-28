@@ -11,10 +11,6 @@
 import {
   getStoredManufacturingData,
   saveStoredManufacturingData,
-  DEMO_USERS,
-  DEMO_DEPARTMENTS,
-  DEMO_PROJECTS,
-  DEMO_CLIENTS,
   DEMO_NOTIFICATIONS,
   DEMO_AUDIT_LOGS,
 } from '../data/manufacturingSeedData';
@@ -319,7 +315,7 @@ export async function createTaskApi(taskData) {
         due_date: taskData.due_date || null,
         deadline: taskData.due_date ? String(taskData.due_date).split('T')[0] : null,
         estimated_hours: Number(taskData.estimated_hours) || 4,
-        tags: taskData.tags || 'Manufacturing',
+        tags: taskData.tags || 'General',
         employee: assignedUsers[0]?.full_name || 'Unassigned',
         assignees: assignedUsers.map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
         source: taskData.source || 'CRM',
@@ -329,7 +325,7 @@ export async function createTaskApi(taskData) {
 
       store.tasks.unshift(newTask);
       saveStoredManufacturingData(store);
-      return { message: 'Work order created successfully', task: newTask };
+      return { message: 'Task created successfully', task: newTask };
     }
     throw err;
   }
@@ -771,7 +767,7 @@ export async function fetchDashboardReportsApi() {
           due_today: dueToday,
           total_projects: store.projects.length,
           active_clients: store.clients.length,
-          oee: 88.4,
+          completion_rate: 88.4,
         },
         statusDistribution: Object.entries(statusMap).map(([status, count]) => ({ status, count })),
         priorityDistribution: Object.entries(priorityMap).map(([priority, count]) => ({ priority, count })),

@@ -52,9 +52,9 @@ export default function App() {
   // App Theme
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('taskflow_theme') || 'dark';
+      return localStorage.getItem('taskflow_theme') || 'light';
     } catch {
-      return 'dark';
+      return 'light';
     }
   });
 
@@ -240,7 +240,7 @@ export default function App() {
     setAuthModalOpen(true);
   };
 
-  // Work Order Actions
+  // Task Actions
   const handleCreateOrUpdateTask = async (taskPayload) => {
     if (editingTask?.id) {
       await updateTaskApi(editingTask.id, taskPayload);
@@ -276,7 +276,7 @@ export default function App() {
       if (selectedTask?.id === taskId) setSelectedTask(null);
       await loadCrmData();
     } catch (err) {
-      alert('Failed to delete work order: ' + err.message);
+      alert('Failed to delete task: ' + err.message);
     }
   };
 
@@ -414,14 +414,14 @@ export default function App() {
 
         {/* Workspace Switcher / Org Badge */}
         <div className="workspace-switcher">
-          <span className="workspace-avatar">ETD</span>
+          <span className="workspace-avatar">ATF</span>
           <div className="workspace-copy">
-            <strong>Employee Task Dashboard</strong>
-            <small>Aulten Digital • Technical Assessment</small>
+            <strong>Aulten Digital</strong>
+            <small>TaskFlow CRM • Technical Assessment</small>
           </div>
           <span
             className={`sync-indicator${dbReady ? '' : ' sync-indicator--demo'}`}
-            title={dbReady ? 'Database Connected (PostgreSQL)' : 'Demo mode — backend not connected'}
+            title={dbReady ? 'Database Connected (PostgreSQL)' : 'Demo mode — using local fallback data'}
           />
         </div>
 
@@ -948,9 +948,9 @@ export default function App() {
         </main>
 
         <footer className="app-footer">
-          <span>Employee Task Dashboard</span>
-          <span>Technical Assessment for Aulten Digital</span>
-          <span>React + Vite (frontend) • Node.js + Express (backend) • Mock CRM &amp; Helpdesk APIs</span>
+          <span>Aulten Digital Private Limited • TaskFlow CRM</span>
+          <span>Employee Task Dashboard • Technical Assessment</span>
+          <span>React 19 + Vite • Node.js + Express • CRM &amp; Helpdesk Feeds</span>
         </footer>
       </div>
 

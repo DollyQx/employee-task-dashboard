@@ -34,8 +34,8 @@ export default function EmployeesView({
     <div className="employees-view">
       <div className="view-header">
         <div>
-          <h2>Plant Workforce Directory</h2>
-          <p>Precision engineering specialists, CNC machinists, shift supervisors, and qualifications</p>
+          <h2>Employee Directory</h2>
+          <p>Team members, designations, departments, and active task workloads</p>
         </div>
         {canCreate && onCreateEmployee && (
           <button type="button" className="button button--primary" onClick={onCreateEmployee}>
@@ -49,7 +49,7 @@ export default function EmployeesView({
           <span aria-hidden="true">🔍</span>
           <input
             type="search"
-            placeholder="Search by Indian name, ID, designation, or email..."
+            placeholder="Search by name, ID, designation, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -57,7 +57,7 @@ export default function EmployeesView({
 
         <div className="filter-dropdowns">
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-            <option value="all">All Manufacturing Divisions</option>
+            <option value="all">All Departments</option>
             {departments.map((d) => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
@@ -65,10 +65,10 @@ export default function EmployeesView({
 
           <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}>
             <option value="all">All Roles</option>
-            <option value="super_admin">Super Admin / Plant Director</option>
-            <option value="admin">Admin / QA Head</option>
-            <option value="manager">Manager / Shift Lead</option>
-            <option value="employee">Specialist / Machinist</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="admin">Admin</option>
+            <option value="manager">Manager</option>
+            <option value="employee">Team Member</option>
           </select>
         </div>
       </div>
@@ -76,14 +76,14 @@ export default function EmployeesView({
       <div className="employees-grid">
         {filteredEmployees.length === 0 ? (
           <div className="empty-state">
-            <p>No manufacturing personnel match the current filters.</p>
+            <p>No employees match the current filters.</p>
           </div>
         ) : (
           filteredEmployees.map((emp) => {
             const activeTasks = parseInt(emp.active_tasks_count || 0, 10);
             const overdueTasks = parseInt(emp.overdue_tasks_count || 0, 10);
             const deptObj = departments.find((d) => d.id === emp.department_id);
-            const deptName = emp.department_name || deptObj?.name || emp.department || 'Plant Operations';
+            const deptName = emp.department_name || deptObj?.name || emp.department || 'General';
 
             return (
               <div
@@ -99,24 +99,24 @@ export default function EmployeesView({
                     {emp.avatar || emp.full_name?.substring(0, 2).toUpperCase() || 'IN'}
                   </span>
                   <div className="employee-card-meta">
-                    <span className="employee-id">{emp.employee_id || 'MFG-0100'}</span>
+                    <span className="employee-id">{emp.employee_id || 'EMP-0100'}</span>
                     <span className={`role-badge role-badge--${emp.crm_role || 'employee'}`}>
-                      {emp.crm_role === 'super_admin' ? 'Plant Director' :
+                      {emp.crm_role === 'super_admin' ? 'Super Admin' :
                        emp.crm_role === 'admin' ? 'Admin' :
-                       emp.crm_role === 'manager' ? 'Shift Manager' : 'Specialist'}
+                       emp.crm_role === 'manager' ? 'Manager' : 'Employee'}
                     </span>
                   </div>
                 </div>
 
                 <h3 className="employee-name">{emp.full_name}</h3>
-                <p className="employee-designation">{emp.designation || 'Manufacturing Specialist'}</p>
-                <p className="employee-dept">🏭 {deptName}</p>
+                <p className="employee-designation">{emp.designation || 'Software Engineer'}</p>
+                <p className="employee-dept">🏢 {deptName}</p>
                 <p className="employee-email">✉️ {emp.email}</p>
                 {emp.phone && <p className="employee-phone">📞 {emp.phone}</p>}
 
                 <div className="employee-workload-bar">
                   <div className="workload-stat">
-                    <span>Work Orders</span>
+                    <span>Active Tasks</span>
                     <strong>{activeTasks || (emp.crm_role === 'employee' ? 3 : 5)}</strong>
                   </div>
                   {overdueTasks > 0 ? (
@@ -126,8 +126,8 @@ export default function EmployeesView({
                     </div>
                   ) : (
                     <div className="workload-stat">
-                      <span>Shift</span>
-                      <strong style={{ fontSize: '11px', color: 'var(--green)' }}>Shift 1</strong>
+                      <span>Status</span>
+                      <strong style={{ fontSize: '11px', color: 'var(--green)' }}>Active</strong>
                     </div>
                   )}
                 </div>
@@ -140,7 +140,7 @@ export default function EmployeesView({
                     onSelectEmployeeTasks?.(emp.full_name);
                   }}
                 >
-                  View Floor Tasks →
+                  View Tasks →
                 </button>
               </div>
             );
@@ -176,28 +176,28 @@ export default function EmployeesView({
             <div className="modal-body">
               <div className="emp-detail-grid">
                 <div>
-                  <label>Division / Shopfloor</label>
-                  <p>🏭 {selectedEmp.department_name || selectedEmp.department || 'Plant Operations'}</p>
+                  <label>Department</label>
+                  <p>🏢 {selectedEmp.department_name || selectedEmp.department || 'General'}</p>
                 </div>
                 <div>
                   <label>Work Email</label>
                   <p>✉️ {selectedEmp.email}</p>
                 </div>
                 <div>
-                  <label>Plant Direct Line</label>
-                  <p>📞 {selectedEmp.phone || '+91 20 6613 4000'}</p>
+                  <label>Direct Phone</label>
+                  <p>📞 {selectedEmp.phone || '+91 11 4050 2000'}</p>
                 </div>
                 <div>
-                  <label>Plant Role & Permissions</label>
+                  <label>Role & Permissions</label>
                   <p><span className={`role-badge role-badge--${selectedEmp.crm_role}`}>{selectedEmp.crm_role}</span></p>
                 </div>
                 <div>
-                  <label>Current Shift Allocation</label>
-                  <p>⏰ Shift 1 (06:00 - 14:30 IST)</p>
+                  <label>Work Schedule</label>
+                  <p>⏰ Full-time (09:30 - 18:30 IST)</p>
                 </div>
                 <div>
-                  <label>Plant Facility</label>
-                  <p>📍 Chakan Industrial Complex, Pune</p>
+                  <label>Location</label>
+                  <p>📍 Aulten Digital HQ, New Delhi</p>
                 </div>
               </div>
             </div>
@@ -212,7 +212,7 @@ export default function EmployeesView({
                   onSelectEmployeeTasks?.(name);
                 }}
               >
-                View Active Work Orders →
+                View Active Tasks →
               </button>
               <button
                 type="button"

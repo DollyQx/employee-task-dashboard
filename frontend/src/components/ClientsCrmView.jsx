@@ -108,7 +108,7 @@ export default function ClientsCrmView({
             const isWon = c.pipeline_stage === 'Won';
             const isProposal = c.pipeline_stage === 'Proposal' || c.pipeline_stage === 'Negotiation';
             const badgeClass = isWon ? 'stage-pill--won' : (isProposal ? 'stage-pill--progress' : 'stage-pill--new');
-            const contact = c.contact_person || c.contact_name || 'Plant Liaison';
+            const contact = c.contact_person || c.contact_name || 'Account Lead';
 
             return (
               <div
@@ -170,7 +170,7 @@ export default function ClientsCrmView({
               <div className="emp-detail-grid">
                 <div><strong>Contract Stage:</strong> {selectedClient.pipeline_stage}</div>
                 <div><strong>Total Value:</strong> ₹{Number(selectedClient.deal_value || 0).toLocaleString('en-IN')}</div>
-                <div><strong>Plant Phone:</strong> {selectedClient.phone || '+91 20 6613 4000'}</div>
+                <div><strong>Contact Phone:</strong> {selectedClient.phone || '+91 20 6613 4000'}</div>
                 <div><strong>Account Lead:</strong> {selectedClient.lead_owner_name || 'Rajesh Kumar'}</div>
                 <div><strong>Sector / Type:</strong> {selectedClient.lead_source || selectedClient.source}</div>
                 <div><strong>Next Milestone:</strong> {selectedClient.follow_up_date || selectedClient.next_follow_up_date || '2026-11-15'}</div>

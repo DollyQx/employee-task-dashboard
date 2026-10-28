@@ -108,7 +108,7 @@ export default function ProjectsView({
                     className="button button--secondary button--full"
                     onClick={() => onFilterByProject(p.id)}
                   >
-                    View Project Work Orders →
+                    View Project Tasks →
                   </button>
                 )}
               </div>

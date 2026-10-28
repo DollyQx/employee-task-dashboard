@@ -2,7 +2,7 @@ const { getPool, closeDatabasePool } = require('../db/pool');
 const { hashPassword } = require('../utils/auth');
 
 async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_PASSWORD || 'TaskFlowDemo@2026!' } = {}) {
-  console.log('Seeding Bharat Precision Dynamics / Aulten TaskFlow CRM demo data...');
+  console.log('Seeding Aulten Digital / TaskFlow CRM demo data...');
 
   const passwordHash = await hashPassword(demoPassword);
 
@@ -13,14 +13,14 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
   if (orgRes.rows.length === 0) {
     const newOrg = await pool.query(
       `INSERT INTO organizations (name, slug)
-       VALUES ('Bharat Precision Dynamics Ltd.', $1)
+       VALUES ('Aulten Digital Private Limited', $1)
        RETURNING id`,
       [orgSlug]
     );
     orgId = newOrg.rows[0].id;
   } else {
     orgId = orgRes.rows[0].id;
-    await pool.query('UPDATE organizations SET name = $1 WHERE id = $2', ['Bharat Precision Dynamics Ltd.', orgId]);
+    await pool.query('UPDATE organizations SET name = $1 WHERE id = $2', ['Aulten Digital Private Limited', orgId]);
   }
 
   // 2. Manufacturing Departments
@@ -58,51 +58,51 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
     {
       name: 'Aarav Sharma',
       email: 'aarav.sharma@example.com',
-      empId: 'MFG-0101',
+      empId: 'EMP-0101',
       crmRole: 'super_admin',
       coreRole: 'owner',
       dept: 'Plant Operations & Production',
-      designation: 'VP of Plant Operations & Manufacturing',
+      designation: 'VP of Engineering',
       phone: '+91 98101 23456',
     },
     {
       name: 'Priya Verma',
       email: 'priya.verma@example.com',
-      empId: 'MFG-0102',
+      empId: 'EMP-0102',
       crmRole: 'admin',
       coreRole: 'admin',
       dept: 'Quality Assurance & ISO 9001',
-      designation: 'Head of Quality Assurance & Metrology',
+      designation: 'Head of Quality Assurance',
       phone: '+91 98102 34567',
     },
     {
       name: 'Sneha Gupta',
       email: 'sneha.gupta@example.com',
-      empId: 'MFG-0103',
+      empId: 'EMP-0103',
       crmRole: 'manager',
       coreRole: 'member',
       dept: 'Metallurgy & Materials Testing Lab',
-      designation: 'Metallurgy & Lab Testing Lead',
+      designation: 'DevOps & Cloud Architecture Lead',
       phone: '+91 98103 45678',
     },
     {
       name: 'Rajesh Kumar',
       email: 'rajesh.kumar@example.com',
-      empId: 'MFG-0104',
+      empId: 'EMP-0104',
       crmRole: 'manager',
       coreRole: 'member',
       dept: 'Plant Operations & Production',
-      designation: 'General Manager of Production Lines',
+      designation: 'Principal Product Manager',
       phone: '+91 98104 56789',
     },
     {
       name: 'Vikram Malhotra',
       email: 'vikram.malhotra@example.com',
-      empId: 'MFG-0105',
+      empId: 'EMP-0105',
       crmRole: 'manager',
       coreRole: 'member',
       dept: 'CNC Machining & Tooling',
-      designation: 'Lead CNC Machining & Tooling Engineer',
+      designation: 'Lead Solutions Architect',
       phone: '+91 98105 67890',
     },
     {
@@ -128,11 +128,11 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
     {
       name: 'Rahul Kumar',
       email: 'rahul.kumar@example.com',
-      empId: 'MFG-0108',
+      empId: 'EMP-0108',
       crmRole: 'employee',
       coreRole: 'member',
       dept: 'CNC Machining & Tooling',
-      designation: 'Senior 5-Axis CNC Mill Specialist',
+      designation: 'Senior Full Stack Developer',
       phone: '+91 98108 90123',
     },
     {
@@ -969,8 +969,8 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
 
   console.log(`
 ======================================================
-✅ Bharat Precision Dynamics / TaskFlow CRM Seed Complete!
-   Organization:   Bharat Precision Dynamics Ltd. (${orgId})
+✅ Aulten Digital / TaskFlow CRM Seed Complete!
+   Organization:   Aulten Digital Private Limited (${orgId})
    Departments:    12
    Employees:      18
    Clients (OEM):  7
@@ -978,10 +978,10 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
    Tasks Seeded:   52
    Demo Password:  ${demoPassword}
    Demo Accounts:
-     - Super Admin: aarav.sharma@example.com (Plant Director)
-     - Admin:       priya.verma@example.com (QA & Metrology Head)
-     - Manager:     sneha.gupta@example.com (Metallurgy Lab Lead)
-     - Employee:    rahul.kumar@example.com (CNC Machining Specialist)
+     - Super Admin: aarav.sharma@example.com (VP of Engineering)
+     - Admin:       priya.verma@example.com (Head of QA)
+     - Manager:     sneha.gupta@example.com (DevOps & Cloud Lead)
+     - Employee:    rahul.kumar@example.com (Senior Full Stack Developer)
 ======================================================
 `);
 

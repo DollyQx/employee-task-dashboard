@@ -20,30 +20,34 @@ export default function TaskCard({ task, view = 'list', onViewDetails }) {
 
   const employeeLabel = employee?.trim() || 'Unassigned';
   const initials = employee?.trim().split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
-  const displayCode = task_code || id || 'WO';
-  const sourceLabel = source || 'Plant Order';
-  const sourceKey = sourceLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'plant';
+  const displayCode = task_code || (id ? (String(id).startsWith('crm') ? 'CRM-' + id.slice(-3) : String(id).startsWith('hd') ? 'HD-' + id.slice(-3) : id) : 'TSK');
+  const sourceLabel = source || (String(displayCode).startsWith('HD') ? 'Helpdesk' : 'CRM');
+  const sourceKey = sourceLabel.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'crm';
 
   return (
     <article className={`task-row${view === 'board' ? ' task-row--board' : ''}${isOverdue ? ' task-row--overdue' : ''}`}>
       <div className="task-main">
         <span className={`source-mark source-mark--${sourceKey}`} aria-hidden="true">
-          {displayCode.startsWith('WO') ? '⚙' : sourceLabel === 'CRM' ? 'C' : sourceLabel === 'Helpdesk' ? 'H' : '⚙'}
+          {sourceLabel === 'Helpdesk' ? 'H' : 'C'}
         </span>
         <div className="task-title-wrap">
           <button
             className="task-title"
             type="button"
             onClick={() => onViewDetails?.(task)}
-            aria-label={`View details for ${title || 'untitled work order'}`}
-            title="View work order details"
+            aria-label={`View details for ${title || 'untitled task'}`}
+            title="View task details"
           >
-            {title || 'Untitled Work Order'}
+            {title || 'Untitled Task'}
             <span className="task-arrow" aria-hidden="true">→</span>
           </button>
           <div className="task-meta-line">
             <span className="task-id-badge">{displayCode}</span>
-            {asset && <span className="task-asset-tag">🔧 {asset}</span>}
+            {task.project_name ? (
+              <span className="task-project-tag">📁 {task.project_name}</span>
+            ) : asset ? (
+              <span className="task-asset-tag">⚙ {asset}</span>
+            ) : null}
             {department_name && <span className="task-dept-tag">{department_name}</span>}
             <span className="task-source-inline">• {sourceLabel}</span>
           </div>

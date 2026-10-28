@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { loginApi, forgotPasswordApi, switchDemoUserApi } from '../api/crm';
 
 const DEMO_PRESETS = [
-  { name: 'Aarav Sharma', role: 'Plant Operations VP (Super Admin)', email: 'aarav.sharma@example.com', badge: 'super_admin' },
-  { name: 'Priya Verma', role: 'QA & Metrology Head (Admin)', email: 'priya.verma@example.com', badge: 'admin' },
-  { name: 'Rajesh Kumar', role: 'General Manager - Production (Manager)', email: 'rajesh.kumar@example.com', badge: 'manager' },
-  { name: 'Vikram Malhotra', role: 'Lead CNC Tooling Engineer (Manager)', email: 'vikram.malhotra@example.com', badge: 'manager' },
-  { name: 'Sneha Gupta', role: 'Metallurgy Lab Lead (Manager)', email: 'sneha.gupta@example.com', badge: 'manager' },
-  { name: 'Rahul Kumar', role: 'Senior CNC Mill Machinist (Employee)', email: 'rahul.kumar@example.com', badge: 'employee' },
+  { name: 'Aarav Sharma', role: 'VP of Engineering (Super Admin)', email: 'aarav.sharma@example.com', badge: 'super_admin' },
+  { name: 'Priya Verma', role: 'Head of Quality Assurance (Admin)', email: 'priya.verma@example.com', badge: 'admin' },
+  { name: 'Rajesh Kumar', role: 'Principal Product Manager (Manager)', email: 'rajesh.kumar@example.com', badge: 'manager' },
+  { name: 'Vikram Malhotra', role: 'Lead Solutions Architect (Manager)', email: 'vikram.malhotra@example.com', badge: 'manager' },
+  { name: 'Sneha Gupta', role: 'DevOps & Cloud Architecture Lead (Manager)', email: 'sneha.gupta@example.com', badge: 'manager' },
+  { name: 'Rahul Kumar', role: 'Senior Full Stack Developer (Employee)', email: 'rahul.kumar@example.com', badge: 'employee' },
 ];
 
 export default function AuthModal({
@@ -91,8 +91,8 @@ export default function AuthModal({
           <div className="auth-brand">
             <span className="brand-mark"><i /><i /><i /><i /></span>
             <div>
-              <h3>Bharat Precision Dynamics</h3>
-              <p>Industrial Plant OS & Work Order Authentication</p>
+              <h3>Aulten Digital</h3>
+              <p>TaskFlow CRM • Employee Authentication</p>
             </div>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close dialog">
@@ -106,7 +106,7 @@ export default function AuthModal({
             className={`tab-btn${mode === 'demo' ? ' is-active' : ''}`}
             onClick={() => setMode('demo')}
           >
-            ⚡ Quick Shift Personas
+            ⚡ Demo Personas
           </button>
           <button
             type="button"
@@ -131,7 +131,7 @@ export default function AuthModal({
           {mode === 'demo' ? (
             <div className="demo-personas-grid">
               <p className="auth-helper-text">
-                Select an Indian manufacturing specialist below to experience the platform with their exact floor permissions, department scope, and assigned work orders:
+                Select a team member below to experience the platform with their role permissions, department scope, and assigned tasks:
               </p>
               <div className="presets-list">
                 {DEMO_PRESETS.map((preset) => (
@@ -160,7 +160,7 @@ export default function AuthModal({
           ) : mode === 'login' ? (
             <form onSubmit={handleLogin} className="auth-form">
               <div className="form-group">
-                <label htmlFor="login-email">Registered Plant Email</label>
+                <label htmlFor="login-email">Email Address</label>
                 <input
                   id="login-email"
                   type="email"
@@ -196,16 +196,16 @@ export default function AuthModal({
               </div>
 
               <button type="submit" className="button button--primary button--full" disabled={loading}>
-                {loading ? 'Authenticating...' : 'Sign In to Plant OS'}
+                {loading ? 'Authenticating...' : 'Sign In'}
               </button>
             </form>
           ) : (
             <form onSubmit={handleForgotPassword} className="auth-form">
               <p className="auth-helper-text">
-                Enter your registered plant email to receive password reset instructions:
+                Enter your registered email to receive password reset instructions:
               </p>
               <div className="form-group">
-                <label htmlFor="reset-email">Plant Email</label>
+                <label htmlFor="reset-email">Email Address</label>
                 <input
                   id="reset-email"
                   type="email"

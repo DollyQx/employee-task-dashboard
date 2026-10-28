@@ -12,12 +12,12 @@ export default function DepartmentsView({
     <div className="departments-view">
       <div className="view-header">
         <div>
-          <h2>Plant Divisions & Shopfloors</h2>
-          <p>Precision manufacturing cells, tooling bays, Metallurgy laboratory, and QA divisions</p>
+          <h2>Departments & Teams</h2>
+          <p>Organisational departments, team leads, and task workload summary</p>
         </div>
         {canCreate && onCreateDepartment && (
           <button type="button" className="button button--primary" onClick={onCreateDepartment}>
-            + Add Division
+            + Add Department
           </button>
         )}
       </div>
@@ -85,7 +85,7 @@ export default function DepartmentsView({
                     className="button button--secondary button--full"
                     onClick={() => onFilterByDepartment(dept.id)}
                   >
-                    View Division Work Orders →
+                    View Department Tasks →
                   </button>
                 )}
               </div>
