@@ -6,6 +6,7 @@ const helpdeskRoutes = require('./routes/helpdesk');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+app.disable('x-powered-by');
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
@@ -13,10 +14,20 @@ const allowedOrigins = [
 ];
 
 // ─── Middleware ──────────────────────────────────────────────────────────────
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+    'Permissions-Policy': 'camera=(), geolocation=(), microphone=()',
+    'Cache-Control': 'no-store',
+  });
+  next();
+});
 app.use(cors({
   origin: allowedOrigins,
+  methods: ['GET'],
 }));
-app.use(express.json());
 
 // ─── API Routes ──────────────────────────────────────────────────────────────
 // NOTE: These are MOCK integrations — not real CRM or Helpdesk systems.

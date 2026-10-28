@@ -7,11 +7,13 @@ export default function FilterBar({
   statusFilter,
   priorityFilter,
   sourceFilter,
+  overdueOnly,
   onSearchChange,
   onEmployeeChange,
   onStatusChange,
   onPriorityChange,
   onSourceChange,
+  onOverdueChange,
   onReset,
 }) {
   const employees = useMemo(() => {
@@ -20,7 +22,7 @@ export default function FilterBar({
   const hasUnassigned = tasks.some((task) => !task.employee?.trim());
 
   const hasActiveFilter = Boolean(search) || employeeFilter !== 'all' || statusFilter !== 'all'
-    || priorityFilter !== 'all' || sourceFilter !== 'all';
+    || priorityFilter !== 'all' || sourceFilter !== 'all' || overdueOnly;
 
   return (
     <div className="filter-bar" aria-label="Filter tasks">
@@ -61,6 +63,7 @@ export default function FilterBar({
         <option value="crm">CRM</option>
         <option value="helpdesk">Helpdesk</option>
       </select>
+      <label className="overdue-filter"><input type="checkbox" checked={overdueOnly} onChange={(event) => onOverdueChange(event.target.checked)} />Overdue only</label>
       {hasActiveFilter && (
         <button
           id="reset-filters-btn"

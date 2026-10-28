@@ -1,8 +1,8 @@
-# Employee Task Dashboard
+# TaskFlow Employee Task Dashboard
 
-A professional, responsive employee task dashboard that aggregates tasks from two separate mock REST API sources — a **CRM** system and a **Helpdesk** system — into a single, priority-sorted unified view.
+A responsive team task dashboard that aggregates tasks from two read-only mock REST API sources — a **CRM** system and a **Helpdesk** system — into a single, priority-sorted view.
 
-> ⚠️ **Mock Integrations Only** — The CRM and Helpdesk endpoints are local mock APIs backed by hardcoded data. They do **not** call real external systems.
+> **Read-only demonstration APIs:** CRM and Helpdesk endpoints return hardcoded demonstration records. They do not connect to real external systems and do not persist TaskFlow edits.
 
 ---
 
@@ -11,7 +11,7 @@ A professional, responsive employee task dashboard that aggregates tasks from tw
 | Layer    | Technology                     |
 |----------|--------------------------------|
 | Frontend | React 19 + Vite 8              |
-| Backend  | Node.js + Express              |
+| Backend  | Node.js + Express 4            |
 | Language | JavaScript (ES Modules)        |
 | Styling  | Vanilla CSS (custom design system) |
 
@@ -24,6 +24,7 @@ employee-task-dashboard/
 ├── backend/
 │   ├── package.json
 │   ├── server.js              # Express server (port 3001)
+│   ├── test/api.test.js        # API, CORS, security-header, and read-only tests
 │   └── routes/
 │       ├── crm.js             # GET /api/crm/tasks
 │       └── helpdesk.js        # GET /api/helpdesk/tasks
@@ -39,17 +40,17 @@ employee-task-dashboard/
 │       ├── api/
 │       │   └── tasks.js       # Parallel fetch + merge helper
 │       ├── utils/
-│       │   └── prioritize.js  # Scoring & sorting algorithm
+│       │   ├── prioritize.js
+│       │   ├── taskMetrics.js # Shared overdue, snapshot, and filter rules
+│       │   └── analyticsDates.js # Date range and trend calculations
 │       └── components/
-│           ├── Header.jsx
 │           ├── FilterBar.jsx
 │           ├── TaskCard.jsx
 │           ├── TaskList.jsx
-│           ├── StatusBadge.jsx
-│           ├── UrgencyBadge.jsx
-│           ├── LoadingSpinner.jsx
-│           ├── ErrorMessage.jsx
-│           └── EmptyState.jsx
+│           ├── TaskDetailDrawer.jsx
+│           ├── TeamAnalytics.jsx
+│           ├── DateRangeControls.jsx
+│           └── OverviewInsights.jsx
 │
 └── README.md
 ```
@@ -102,6 +103,25 @@ npm run dev
 
 Open your browser at **http://localhost:5173**
 
+## Read-only Data and Supported Actions
+
+The backend exposes `GET /api/crm/tasks`, `GET /api/helpdesk/tasks`, and `GET /api/health`. CRM and Helpdesk records are demonstration data held in route modules. There is no database, authentication/authorization model, or write integration. Create, edit, delete, bulk update, and persistent status changes are intentionally not offered. Use **Open original task** in the detail drawer only where the source URL is available.
+
+Task records include `id`, `title`, `employee`, `status`, `deadline`, `urgency`, `source`, and `sourceUrl`. The current response does not include creation or completion timestamps or historical snapshots. Team Analytics labels those trends unavailable instead of deriving them from deadlines. Current workload, overdue, and completion-rate figures are snapshots of fetched records; completed tasks are excluded from overdue counts.
+
+## Environment and Deployment
+
+For Vercel, set the frontend root directory to `frontend` and define `VITE_API_BASE_URL` as the backend origin (for example, `https://employee-task-dashboard-g2ug.onrender.com`, without `/api`). Vite embeds this value at build time. The frontend keeps `/api` as a development fallback for the Vite proxy.
+
+For Render, set the backend root directory to `backend`, the build command to `npm ci`, and the start command to `npm start`. The Express CORS allowlist includes the production TaskFlow origin and local Vite origins; browser requests are limited to GET. Do not configure credentials or write permissions: this service has no authenticated persistence layer.
+
+Run checks from the repository root:
+
+```bash
+cd frontend && npm test && npm run build
+cd ../backend && npm test
+```
+
 ---
 
 ## API Endpoints
@@ -128,6 +148,7 @@ Returns 8 mock CRM tasks (client follow-ups, proposals, renewals).
       "sourceUrl": "https://example-crm.com/tasks/crm-001"
     }
   ]
+  ]
 }
 ```
 
@@ -149,7 +170,7 @@ Every task object has these fields:
 |-------------|--------|----------------------------------------------|
 | `id`        | string | Unique identifier (e.g. `crm-001`, `hd-007`) |
 | `title`     | string | Short description of the task                |
-| `employee`  | string | Assigned employee's full name                |
+| `employee`  | string | Assigned employee's full name, when assigned  |
 | `status`    | string | `pending` \| `in-progress` \| `completed`   |
 | `deadline`  | string | ISO date string `YYYY-MM-DD`                 |
 | `urgency`   | string | `high` \| `medium` \| `low`                 |
@@ -160,7 +181,6 @@ Every task object has these fields:
 
 ## Prioritization Algorithm
 
-Tasks from both sources are combined and sorted using a simple, explainable numeric scoring system.
 
 ```
 Priority Score = urgencyScore + deadlineScore
@@ -197,14 +217,20 @@ Tasks are sorted **descending** by score. Ties maintain their original insertion
 
 - ✅ **Unified task list** — CRM + Helpdesk tasks merged and sorted by priority
 - ✅ **Priority scoring** — transparent urgency × deadline algorithm
-- ✅ **Filters** — filter by employee name and task status
-- ✅ **Clickable tasks** — opens source system URL in new tab
-- ✅ **Loading state** — animated spinner during parallel fetches
+- ✅ **Filters** — search and filter by assignee, status, priority, source, and overdue state
+- ✅ **Task details** — accessible, read-only drawer with a validated original-source link
+- ✅ **Loading state** — task skeletons during parallel fetches
 - ✅ **Error state** — clear message + retry button if API is unreachable
 - ✅ **Empty state** — friendly message + clear filters button
-- ✅ **Overdue warnings** — red highlight + inline warning banner
+- ✅ **Overdue warnings** — restrained date indicators; completed tasks are excluded
+- ✅ **Team analytics** — workload and current-snapshot distributions from fetched data
+- ✅ **Date ranges** — timestamp-backed trends only; unavailable history is explicitly identified
 - ✅ **Responsive** — works on mobile, tablet, and desktop
 - ✅ **Accessible** — ARIA roles, keyboard navigation, semantic HTML
+- ✅ **Overview distributions** — current task summaries link to filtered task lists
+- ✅ **Task detail drawer** — keyboard accessible, with safe original-source links
+- ✅ **Team analytics** — workload, snapshot completion, and honest date-history limits
+- ✅ **Read-only source status** — mock APIs do not claim changes are persisted
 
 ---
 
@@ -212,10 +238,31 @@ Tasks are sorted **descending** by score. Ties maintain their original insertion
 
 | Scenario                      | Behaviour                                                    |
 |-------------------------------|--------------------------------------------------------------|
-| Backend not running           | Error state with exact error message and Retry button        |
+| Backend unavailable or timed out | Recoverable error state with source context and Retry button |
 | One API fails, other succeeds | Error thrown (both fetched via `Promise.all`)                |
 | Filters yield no results      | Empty state with "Clear Filters" button                      |
 | Unknown task status/urgency   | Graceful fallback — shows raw value with default styling     |
+
+## Validation and Security Notes
+
+- The backend is a read-only demonstration service. It has no database, user authentication, authorization, or source write API. Task create/edit/delete, status mutation, and bulk operations are not supported.
+- CORS allows the deployed Vercel origin and local Vite development origins. It advertises GET only. Response headers include `nosniff`, frame denial, referrer policy, and `no-store`; `X-Powered-By` is disabled.
+- The frontend validates task response shape, reports HTTP/JSON/network errors, and times out requests after 10 seconds.
+- Production dependency audits were clean at the most recent review; rerun audits when dependencies change.
+- The current task schema has no creation/completion timestamps or historical snapshots. Activity trends and historical overdue comparisons are unavailable until the data provider supplies reliable event history.
+
+## Deployment Checklist
+
+1. In Vercel, use `frontend` as the root directory and set `VITE_API_BASE_URL` to `https://employee-task-dashboard-g2ug.onrender.com` (origin only, without `/api`) for each deployed environment. Rebuild after changing it.
+2. In Render, use `backend` as the root directory, `npm ci` as the build command, and `npm start` as the start command. Confirm the deployed branch/commit in the Render dashboard.
+3. Verify `GET https://employee-task-dashboard-g2ug.onrender.com/api/health` and both `/api/crm/tasks` and `/api/helpdesk/tasks` after deployment.
+4. Verify the Render response includes `Access-Control-Allow-Origin: https://employee-task-dashboard-chi.vercel.app` for requests with that Origin.
+5. These commands do not deploy, commit, or push:
+
+```bash
+cd frontend && npm ci && npm test && npm run build
+cd ../backend && npm ci && npm test
+```
 
 ---
 

@@ -35,6 +35,11 @@ test('GET /api/health returns a healthy status and permits the Vercel origin', a
   assert.equal(response.headers.get('access-control-allow-origin'), productionOrigin);
   assert.equal(body.status, 'ok');
   assert.ok(Number.isNaN(Date.parse(body.timestamp)) === false);
+  assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+  assert.equal(response.headers.get('x-frame-options'), 'DENY');
+  assert.equal(response.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.equal(response.headers.get('x-powered-by'), null);
 });
 
 test('GET /api/crm/tasks returns the CRM task response shape', async () => {
@@ -81,5 +86,30 @@ test('OPTIONS preflight permits GET from the Vercel origin on both task routes',
     assert.equal(response.status, 204);
     assert.equal(response.headers.get('access-control-allow-origin'), productionOrigin);
     assert.match(response.headers.get('access-control-allow-methods'), /GET/);
+    assert.doesNotMatch(response.headers.get('access-control-allow-methods'), /POST|PUT|PATCH|DELETE/);
   }
+});
+
+test('task sources are read-only and reject unsupported write methods', async () => {
+  for (const path of ['/api/crm/tasks', '/api/helpdesk/tasks']) {
+    for (const method of ['POST', 'PUT', 'PATCH', 'DELETE']) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method,
+        headers: { Origin: productionOrigin, 'Content-Type': 'application/json' },
+        body: method === 'DELETE' ? undefined : JSON.stringify({ title: 'unsupported mutation' }),
+      });
+      assert.equal(response.status, 404, `${method} ${path} should remain unsupported`);
+      assert.equal(response.headers.get('access-control-allow-origin'), productionOrigin);
+      assert.deepEqual(await response.json(), { error: 'Route not found' });
+    }
+  }
+});
+
+test('CORS does not allow unknown origins', async () => {
+  const response = await fetch(`${baseUrl}/api/health`, {
+    headers: { Origin: 'https://untrusted.example' },
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('access-control-allow-origin'), null);
 });

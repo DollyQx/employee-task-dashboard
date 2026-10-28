@@ -1,9 +1,14 @@
 import React, { useEffect, useRef } from 'react';
 import StatusBadge from './StatusBadge';
 import UrgencyBadge from './UrgencyBadge';
+import { daysFromToday, isTaskOverdue } from '../utils/taskMetrics';
+import { safeExternalUrl } from '../utils/safeUrl';
 
 function formatDeadline(deadline) {
-  return new Date(`${deadline}T00:00:00`).toLocaleDateString('en-US', {
+  const parsed = daysFromToday(deadline);
+  if (parsed === null) return 'Invalid due date';
+  const date = new Date(deadline.length === 10 ? `${deadline}T00:00:00` : deadline);
+  return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -53,9 +58,10 @@ export default function TaskDetailDrawer({ task, onClose }) {
     };
   }, [onClose]);
 
-  const overdue = typeof task.daysFromToday === 'number'
-    && task.daysFromToday < 0
-    && task.status !== 'completed';
+  const overdue = isTaskOverdue(task);
+  const daysUntilDeadline = daysFromToday(task.deadline);
+  const sourceLabel = task.source || 'This task source';
+  const originalTaskUrl = safeExternalUrl(task.sourceUrl);
 
   return (
     <div className="task-drawer-layer">
@@ -76,19 +82,20 @@ export default function TaskDetailDrawer({ task, onClose }) {
         </header>
 
         <div className="task-drawer__content">
-          {task.title && <h3 className="task-drawer__task-title">{task.title}</h3>}
-          {task.id && <p className="task-drawer__id">Task ID <span>{task.id}</span></p>}
+          <h3 className="task-drawer__task-title">{task.title || 'Untitled task'}</h3>
+          <p className="task-drawer__id">Task ID <span>{task.id || 'Not provided'}</span></p>
 
           <dl className="task-detail-list">
-            {task.source && <div className="task-detail-row"><dt>Source</dt><dd><span className={`source-mark source-mark--${task.source.toLowerCase().replace(/\s+/g, '-')}`} aria-hidden="true">{task.source === 'CRM' ? 'C' : 'H'}</span>{task.source}</dd></div>}
-            {task.employee && <div className="task-detail-row"><dt>Assignee</dt><dd><span className="assignee-avatar" aria-hidden="true">{task.employee.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>{task.employee}</dd></div>}
+            <div className="task-detail-row"><dt>Source</dt><dd>{task.source ? <><span className={`source-mark source-mark--${task.source.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'unknown'}`} aria-hidden="true">{task.source === 'CRM' ? 'C' : task.source === 'Helpdesk' ? 'H' : '?'}</span>{task.source}</> : 'Unknown source'}</dd></div>
+            {<div className="task-detail-row"><dt>Assignee</dt><dd>{task.employee?.trim() ? <><span className="assignee-avatar" aria-hidden="true">{task.employee.trim().split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase()}</span>{task.employee.trim()}</> : 'Unassigned'}</dd></div>}
             {task.urgency && <div className="task-detail-row"><dt>Priority</dt><dd><UrgencyBadge urgency={task.urgency} /></dd></div>}
             {task.status && <div className="task-detail-row"><dt>Status</dt><dd><StatusBadge status={task.status} /></dd></div>}
-            {task.deadline && <div className="task-detail-row"><dt>Due date</dt><dd className={overdue ? 'task-detail-row__overdue' : ''}>{formatDeadline(task.deadline)}</dd></div>}
-            {typeof task.daysFromToday === 'number' && <div className="task-detail-row"><dt>Due status</dt><dd className={overdue ? 'task-detail-row__overdue' : ''}>{overdue ? `${Math.abs(task.daysFromToday)} day${Math.abs(task.daysFromToday) === 1 ? '' : 's'} overdue` : task.daysFromToday === 0 ? 'Due today' : task.daysFromToday > 0 ? 'Upcoming' : 'Completed'}</dd></div>}
+            <div className="task-detail-row"><dt>Due date</dt><dd className={overdue ? 'task-detail-row__overdue' : ''}>{task.deadline ? formatDeadline(task.deadline) : 'No due date'}</dd></div>
+            <div className="task-detail-row"><dt>Due status</dt><dd className={overdue ? 'task-detail-row__overdue' : ''}>{overdue ? `${Math.abs(daysUntilDeadline)} day${Math.abs(daysUntilDeadline) === 1 ? '' : 's'} overdue` : daysUntilDeadline === 0 ? 'Due today' : daysUntilDeadline > 0 ? 'Upcoming' : task.status === 'completed' ? 'Completed' : task.deadline ? 'Invalid due date' : 'No due date'}</dd></div>
           </dl>
 
-          {task.sourceUrl && <a className="task-drawer__original-link" href={task.sourceUrl} target="_blank" rel="noreferrer">Open original task <span aria-hidden="true">↗</span></a>}
+          <p className="task-drawer__readonly">{sourceLabel} tasks are read-only in TaskFlow. Make changes in the original source when available.</p>
+          {originalTaskUrl && <a className="task-drawer__original-link" href={originalTaskUrl} target="_blank" rel="noopener noreferrer">Open original task <span aria-hidden="true">↗</span></a>}
         </div>
       </aside>
     </div>

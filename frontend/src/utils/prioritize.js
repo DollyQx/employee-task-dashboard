@@ -1,3 +1,5 @@
+import { daysFromToday } from './taskMetrics.js';
+
 /**
  * prioritize.js
  *
@@ -28,31 +30,18 @@ const URGENCY_SCORE = {
 };
 
 /**
- * Returns the number of calendar days from today to a given deadline string.
- * Negative = overdue, 0 = today, positive = future.
- */
-export function daysFromToday(deadlineStr) {
-  const today = new Date();
-  // Strip time component so comparison is purely date-based
-  today.setHours(0, 0, 0, 0);
-  const deadline = new Date(deadlineStr + 'T00:00:00');
-  const msPerDay = 1000 * 60 * 60 * 24;
-  return Math.round((deadline - today) / msPerDay);
-}
-
-/**
  * Computes a priority score for a single task object.
  */
-export function computeScore(task) {
+export function computeScore(task, now = new Date()) {
   const urgencyScore = URGENCY_SCORE[task.urgency] ?? 5;
-  const days = daysFromToday(task.deadline);
+  const days = daysFromToday(task.deadline, now);
 
   let deadlineScore;
-  if (days < 0) {
+  if (days !== null && days < 0) {
     deadlineScore = 50; // overdue
   } else if (days === 0) {
     deadlineScore = 30; // due today
-  } else if (days <= 3) {
+  } else if (days !== null && days <= 3) {
     deadlineScore = 15; // due within 3 days
   } else {
     deadlineScore = 0;  // future
@@ -65,12 +54,12 @@ export function computeScore(task) {
  * Adds a `score` and `daysFromToday` field to each task, then sorts
  * descending (highest score first).
  */
-export function prioritize(tasks) {
+export function prioritize(tasks, now = new Date()) {
   return tasks
     .map((task) => ({
       ...task,
-      score: computeScore(task),
-      daysFromToday: daysFromToday(task.deadline),
+      score: computeScore(task, now),
+      daysFromToday: daysFromToday(task.deadline, now),
     }))
     .sort((a, b) => b.score - a.score);
 }

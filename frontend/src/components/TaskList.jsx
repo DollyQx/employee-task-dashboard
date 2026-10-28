@@ -12,10 +12,14 @@ export default function TaskList({ tasks, view, hasFilters, onReset, onSelectTas
   }
 
   if (view === 'board') {
+    const knownStatuses = ['pending', 'in-progress', 'completed'];
+    const unknownStatuses = [...new Set(tasks.map((task) => task.status || 'unknown'))]
+      .filter((status) => !knownStatuses.includes(status));
     const columns = [
       ['pending', 'To do'],
       ['in-progress', 'In progress'],
       ['completed', 'Completed'],
+      ...unknownStatuses.map((status) => [status, 'Other status']),
     ];
     return <div className="board-grid">{columns.map(([status, title]) => {
       const columnTasks = tasks.filter((task) => task.status === status);

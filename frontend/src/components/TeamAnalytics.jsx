@@ -1,73 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import DateRangeControls from './DateRangeControls';
+import { getDateRange, getEventDate, getPreviousDateRange, buildTrend } from '../utils/analyticsDates';
+import { completionRate, getTaskMetrics, isTaskOverdue } from '../utils/taskMetrics';
 
 const UNASSIGNED_KEY = '__unassigned__';
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function dateKey(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-function parseDateKey(value) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return null;
-  const [year, month, day] = value.split('-').map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day
-    ? date
-    : null;
-}
-
-function eventDateKey(value) {
-  if (typeof value !== 'string' && typeof value !== 'number') return null;
-  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    return parseDateKey(value) ? value : null;
-  }
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : dateKey(date);
-}
-
-function getEventDate(task, fieldNames) {
-  for (const field of fieldNames) {
-    const key = eventDateKey(task[field]);
-    if (key) return key;
-  }
-  return null;
-}
-
-function getLocalToday() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today;
-}
-
-function dateOrdinal(dateString) {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return Date.UTC(year, month - 1, day) / DAY_MS;
-}
-
-function isOverdue(task) {
-  if (task.status === 'completed') return false;
-
-  if (Number.isFinite(task.daysFromToday)) {
-    return task.daysFromToday < 0;
-  }
-
-  if (!task.deadline || Number.isNaN(Date.parse(`${task.deadline}T00:00:00`))) {
-    return false;
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const deadline = new Date(`${task.deadline}T00:00:00`);
-  return deadline < today;
-}
-
-function rate(completed, total) {
-  return total ? Math.round((completed / total) * 100) : 0;
-}
 
 function employeeLabel(employee) {
   return employee?.trim() || 'Unassigned';
@@ -78,43 +14,6 @@ function statusLabel(status) {
   if (status === 'pending') return 'To do';
   if (status === 'completed') return 'Completed';
   return status;
-}
-
-function buildTrend(events, dateRange) {
-  if (!dateRange.valid || events.length === 0) return [];
-
-  const start = dateRange.start
-    ? parseDateKey(dateRange.start)
-    : parseDateKey(events.reduce((earliest, event) => event.date < earliest ? event.date : earliest, events[0].date));
-  const end = dateRange.end
-    ? parseDateKey(dateRange.end)
-    : parseDateKey(events.reduce((latest, event) => event.date > latest ? event.date : latest, events[0].date));
-  if (!start || !end || end < start) return [];
-
-  const dayCount = dateOrdinal(dateKey(end)) - dateOrdinal(dateKey(start)) + 1;
-  const step = dayCount <= 31 ? 1 : dayCount <= 180 ? 7 : 30;
-  const buckets = [];
-  for (let offset = 0; offset < dayCount; offset += step) {
-    const bucketStart = new Date(start.getTime());
-    bucketStart.setDate(bucketStart.getDate() + offset);
-    const bucketEnd = new Date(start.getTime());
-    bucketEnd.setDate(bucketEnd.getDate() + Math.min(offset + step - 1, dayCount - 1));
-    buckets.push({
-      start: dateKey(bucketStart),
-      end: dateKey(bucketEnd),
-      label: step === 1
-        ? bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        : `${bucketStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}–${bucketEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
-      count: 0,
-    });
-  }
-
-  events.forEach((event) => {
-    if (event.date < dateKey(start) || event.date > dateKey(end)) return;
-    const index = Math.floor((dateOrdinal(event.date) - dateOrdinal(dateKey(start))) / step);
-    if (buckets[index]) buckets[index].count += 1;
-  });
-  return buckets;
 }
 
 function periodComparison(current, previous) {
@@ -161,20 +60,7 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
   const [customEnd, setCustomEnd] = useState('');
 
   const dateRange = useMemo(() => {
-    const today = getLocalToday();
-    if (rangePreset === 'all') return { start: null, end: null, valid: true, label: 'All time' };
-    if (rangePreset === 'custom') {
-      const start = parseDateKey(customStart);
-      const end = parseDateKey(customEnd);
-      if (!start || !end) return { start: null, end: null, valid: false, label: 'Choose both dates' };
-      if (end < start) return { start: null, end: null, valid: false, label: 'Invalid date range' };
-      return { start: dateKey(start), end: dateKey(end), valid: true, label: `${customStart} to ${customEnd}` };
-    }
-    const days = Number.parseInt(rangePreset, 10);
-    if (![7, 30, 90].includes(days)) return { start: null, end: null, valid: false, label: 'Invalid date range' };
-    const start = new Date(today.getTime());
-    start.setDate(start.getDate() - days + 1);
-    return { start: dateKey(start), end: dateKey(today), valid: true, label: `Last ${days} days` };
+    return getDateRange(rangePreset, customStart, customEnd);
   }, [rangePreset, customStart, customEnd]);
 
   const scopedTasks = useMemo(() => tasks.filter((task) => {
@@ -206,16 +92,9 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
       return { created, completed, previousCreated: null, previousCompleted: null };
     }
 
-    const start = parseDateKey(dateRange.start);
-    const end = parseDateKey(dateRange.end);
-    const duration = dateOrdinal(dateRange.end) - dateOrdinal(dateRange.start) + 1;
-    const previousEnd = new Date(start.getTime());
-    previousEnd.setDate(previousEnd.getDate() - 1);
-    const previousStart = new Date(previousEnd.getTime());
-    previousStart.setDate(previousStart.getDate() - duration + 1);
-    const previousStartKey = dateKey(previousStart);
-    const previousEndKey = dateKey(previousEnd);
-    const inPreviousRange = (event) => event.date >= previousStartKey && event.date <= previousEndKey;
+    const previousRange = getPreviousDateRange(dateRange);
+    const inPreviousRange = (event) => previousRange
+      && event.date >= previousRange.start && event.date <= previousRange.end;
     return {
       created,
       completed,
@@ -225,15 +104,7 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
   }, [eventData, dateRange]);
 
   const metrics = useMemo(() => {
-    const completed = scopedTasks.filter((task) => task.status === 'completed').length;
-    const overdue = scopedTasks.filter(isOverdue).length;
-    return {
-      total: scopedTasks.length,
-      completed,
-      open: scopedTasks.length - completed,
-      overdue,
-      completionRate: rate(completed, scopedTasks.length),
-    };
+    return getTaskMetrics(scopedTasks);
   }, [scopedTasks]);
 
   const employeeStats = useMemo(() => {
@@ -248,10 +119,10 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
       group.total += 1;
       if (task.status === 'completed') group.completed += 1;
       else group.open += 1;
-      if (isOverdue(task)) group.overdue += 1;
+      if (isTaskOverdue(task)) group.overdue += 1;
     });
     return [...groups.values()]
-      .map((group) => ({ ...group, completionRate: rate(group.completed, group.total) }))
+      .map((group) => ({ ...group, completionRate: completionRate(group.completed, group.total) }))
       .sort((a, b) => b.total - a.total || a.label.localeCompare(b.label));
   }, [scopedTasks]);
 
@@ -267,13 +138,11 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
   const maximumEmployeeTasks = Math.max(1, ...employeeStats.map((employee) => employee.total));
   const maximumStatusTasks = Math.max(1, ...statusStats.map(([, count]) => count));
   const hasUnassigned = scopedTasks.some((task) => !task.employee?.trim());
-  const hasCreatedDates = eventData.created.length > 0;
-  const hasCompletedDates = eventData.completed.length > 0;
-  const allTasksHaveCreatedDate = scopedTasks.length > 0
-    && scopedTasks.every((task) => getEventDate(task, ['createdAt', 'created_at']));
+  const createdDateCount = scopedTasks.filter((task) => getEventDate(task, ['createdAt', 'created_at'])).length;
   const completedTasks = scopedTasks.filter((task) => task.status === 'completed');
-  const allCompletedHaveDate = completedTasks.length > 0
-    && completedTasks.every((task) => getEventDate(task, ['completedAt', 'completed_at']));
+  const completedDateCount = completedTasks.filter((task) => getEventDate(task, ['completedAt', 'completed_at'])).length;
+  const allTasksHaveCreatedDate = scopedTasks.length > 0 && createdDateCount === scopedTasks.length;
+  const allCompletedHaveDate = completedTasks.length > 0 && completedDateCount === completedTasks.length;
 
   const createdTrend = useMemo(() => buildTrend(periodData.created, dateRange), [periodData.created, dateRange]);
   const completedTrend = useMemo(() => buildTrend(periodData.completed, dateRange), [periodData.completed, dateRange]);
@@ -281,9 +150,9 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
   const customRangeError = rangePreset === 'custom'
     ? !customStart || !customEnd
       ? 'Enter a start and end date to apply the custom range.'
-      : !parseDateKey(customStart) || !parseDateKey(customEnd)
-        ? 'Enter valid calendar dates.'
-        : customEnd < customStart ? 'End date must be on or after the start date.' : ''
+      : getDateRange('custom', customStart, customEnd).label === 'Invalid date range'
+        ? 'End date must be on or after the start date.'
+        : !getDateRange('custom', customStart, customEnd).valid ? 'Enter valid calendar dates.' : ''
     : '';
 
   const maxCreatedTrend = Math.max(1, ...createdTrend.map((bucket) => bucket.count));
@@ -296,10 +165,10 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
     periodData.completed,
     rangePreset !== 'all' && allCompletedHaveDate ? periodData.previousCompleted : null
   );
-  const createdUnavailable = !hasCreatedDates
+  const createdUnavailable = createdDateCount === 0
     ? 'Creation timestamps are not present in the task data returned by the API.'
     : !dateRange.valid ? 'Choose a valid date range to view this trend.' : '';
-  const completedUnavailable = !hasCompletedDates
+  const completedUnavailable = completedDateCount === 0
     ? 'Completion timestamps are not present for completed tasks in the API data.'
     : !dateRange.valid ? 'Choose a valid date range to view this trend.' : '';
 
@@ -353,8 +222,8 @@ export default function TeamAnalytics({ tasks, onSelectEmployee }) {
         <>
           <section className="analytics-summary" aria-label="Task performance metrics">
             <article className="analytics-metric"><span>Current total tasks</span><strong>{metrics.total}</strong><small>Filtered task snapshot</small></article>
-            <article className="analytics-metric"><span>Tasks created in range</span><strong>{dateRange.valid ? hasCreatedDates ? periodData.created.length : 'Unavailable' : '—'}</strong><small>{hasCreatedDates ? 'Based on creation timestamp' : 'No creation timestamp in API data'}</small></article>
-            <article className="analytics-metric analytics-metric--complete"><span>Tasks completed in range</span><strong>{dateRange.valid ? hasCompletedDates ? periodData.completed.length : 'Unavailable' : '—'}</strong><small>{hasCompletedDates ? 'Based on completion timestamp' : 'No completion timestamp in API data'}</small></article>
+            <article className="analytics-metric"><span>Tasks created in range</span><strong>{dateRange.valid ? createdDateCount ? periodData.created.length : 'Unavailable' : '—'}</strong><small>{createdDateCount ? `${createdDateCount} of ${scopedTasks.length} tasks have a creation timestamp` : 'No creation timestamp in API data'}</small></article>
+            <article className="analytics-metric analytics-metric--complete"><span>Tasks completed in range</span><strong>{dateRange.valid ? completedDateCount ? periodData.completed.length : 'Unavailable' : '—'}</strong><small>{completedDateCount ? `${completedDateCount} of ${completedTasks.length} completed tasks have a timestamp` : 'No completion timestamp in API data'}</small></article>
             <article className="analytics-metric analytics-metric--overdue"><span>Currently overdue</span><strong>{metrics.overdue}</strong><small>Outstanding snapshot; completed excluded</small></article>
             <article className="analytics-metric"><span>Current open tasks</span><strong>{metrics.open}</strong><small>Not completed in current snapshot</small></article>
             <article className="analytics-metric analytics-metric--complete"><span>Current completed tasks</span><strong>{metrics.completed}</strong><small>Filtered task snapshot</small></article>
