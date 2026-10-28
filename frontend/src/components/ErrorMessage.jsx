@@ -10,8 +10,7 @@ export default function ErrorMessage({ error, onRetry }) {
       <div className="error-icon" aria-hidden="true">⚠️</div>
       <h2 className="error-title">Could not load tasks</h2>
       <p className="error-message">
-        The backend API could not be reached. Make sure the backend server is
-        running on <strong>http://localhost:3001</strong> and try again.
+        The task service could not be reached. Check the API connection and try again.
       </p>
       {error && (
         <code className="error-detail">{error}</code>

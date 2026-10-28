@@ -10,13 +10,18 @@
 
 import { prioritize } from '../utils/prioritize';
 
-const BASE_URL = '/api'; // Vite proxies this to http://localhost:3001
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/+$/, '');
+const BASE_URL = configuredBaseUrl || (import.meta.env.DEV ? '/api' : null);
 
 /**
  * Fetches from a single endpoint and returns the tasks array.
  * Throws a descriptive error if the request fails.
  */
 async function fetchSource(endpoint, sourceName) {
+  if (!BASE_URL) {
+    throw new Error('VITE_API_BASE_URL is not configured for this deployment.');
+  }
+
   const res = await fetch(`${BASE_URL}${endpoint}`);
   if (!res.ok) {
     throw new Error(`${sourceName} API returned ${res.status}: ${res.statusText}`);
