@@ -1,0 +1,98 @@
+import React from 'react';
+
+export default function DepartmentsView({
+  departments = [],
+  currentUser,
+  onCreateDepartment,
+  onFilterByDepartment,
+}) {
+  const canCreate = currentUser?.crm_role === 'super_admin' || currentUser?.crm_role === 'admin';
+
+  return (
+    <div className="departments-view">
+      <div className="view-header">
+        <div>
+          <h2>Teams & Departments</h2>
+          <p>Aulten Digital organizational structure, department leads, and task distributions</p>
+        </div>
+        {canCreate && onCreateDepartment && (
+          <button type="button" className="button button--primary" onClick={onCreateDepartment}>
+            + Add Department
+          </button>
+        )}
+      </div>
+
+      <div className="departments-grid">
+        {departments.length === 0 ? (
+          <div className="empty-state">
+            <p>No departments configured.</p>
+          </div>
+        ) : (
+          departments.map((dept) => {
+            const memberCount = parseInt(dept.member_count || 0, 10);
+            const activeTasks = parseInt(dept.active_tasks_count || 0, 10);
+            const completedTasks = parseInt(dept.completed_tasks_count || 0, 10);
+            const totalTasks = activeTasks + completedTasks;
+            const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+            return (
+              <div key={dept.id} className="department-card">
+                <div className="department-card-top">
+                  <span className="dept-code-badge">{dept.code || 'DEPT'}</span>
+                  <h3>{dept.name}</h3>
+                </div>
+
+                <p className="department-desc">{dept.description || 'Specialized division of Aulten Digital.'}</p>
+
+                <div className="department-head-row">
+                  <span className="meta-label">Department Head:</span>
+                  <div className="head-info">
+                    <span className="mini-avatar">
+                      {dept.head_avatar || (dept.head_name ? dept.head_name.substring(0, 2).toUpperCase() : 'DH')}
+                    </span>
+                    <strong>{dept.head_name || 'Designation Pending'}</strong>
+                  </div>
+                </div>
+
+                <div className="department-metrics">
+                  <div className="metric-box">
+                    <span>Members</span>
+                    <strong>{memberCount}</strong>
+                  </div>
+                  <div className="metric-box">
+                    <span>Active Tasks</span>
+                    <strong>{activeTasks}</strong>
+                  </div>
+                  <div className="metric-box">
+                    <span>Closed</span>
+                    <strong>{completedTasks}</strong>
+                  </div>
+                </div>
+
+                <div className="progress-bar-container">
+                  <div className="progress-bar-labels">
+                    <span>Team Completion</span>
+                    <span>{completionPct}%</span>
+                  </div>
+                  <div className="progress-bar-track">
+                    <div className="progress-bar-fill" style={{ width: `${completionPct}%` }} />
+                  </div>
+                </div>
+
+                {onFilterByDepartment && (
+                  <button
+                    type="button"
+                    className="button button--secondary button--full"
+                    onClick={() => onFilterByDepartment(dept.id)}
+                  >
+                    View Department Tasks →
+                  </button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}

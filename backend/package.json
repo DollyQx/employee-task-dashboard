@@ -1,12 +1,14 @@
 {
   "name": "employee-task-dashboard-backend",
   "version": "1.0.0",
-  "description": "Mock REST API backend for Employee Task Dashboard",
+  "description": "Enterprise TaskFlow Employee CRM API for Aulten Digital",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "provision:admin": "node scripts/provision-admin.js",
     "test": "node --test"
   },
   "dependencies": {

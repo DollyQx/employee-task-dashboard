@@ -55,8 +55,32 @@ async function insertUser(organizationId, email) {
 }
 
 test('database migration is recorded after successful application', async () => {
-  const { rows } = await pool.query('SELECT migration_name FROM schema_migrations');
-  assert.deepEqual(rows.map((row) => row.migration_name), ['001_create_taskflow_core.sql']);
+  const { rows } = await pool.query('SELECT migration_name FROM schema_migrations ORDER BY migration_name ASC');
+  assert.deepEqual(rows.map((row) => row.migration_name), [
+    '001_create_taskflow_core.sql',
+    '002_aulten_digital_crm_schema.sql',
+  ]);
+});
+
+test('crm schema creates departments, projects, and clients', async () => {
+  const orgId = await insertOrganization('Aulten Digital Org', `aulten-${randomUUID()}`);
+  const deptResult = await pool.query(
+    'INSERT INTO departments (organization_id, name, code) VALUES ($1, $2, $3) RETURNING id',
+    [orgId, 'Engineering', 'ENG']
+  );
+  assert.ok(deptResult.rows[0].id);
+
+  const clientResult = await pool.query(
+    'INSERT INTO clients (organization_id, company_name, contact_person, email) VALUES ($1, $2, $3, $4) RETURNING id',
+    [orgId, 'TechCorp India', 'Rajesh Gupta', 'rajesh@example.com']
+  );
+  assert.ok(clientResult.rows[0].id);
+
+  const projectResult = await pool.query(
+    'INSERT INTO projects (organization_id, name, client_id) VALUES ($1, $2, $3) RETURNING id',
+    [orgId, 'Client CRM Portal', clientResult.rows[0].id]
+  );
+  assert.ok(projectResult.rows[0].id);
 });
 
 test('schema enforces required fields, unique organization slugs, and valid user roles', async () => {

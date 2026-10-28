@@ -443,3 +443,1028 @@ button:disabled { opacity: .55; cursor: wait !important; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+/* ─── Aulten Digital TaskFlow CRM Enterprise Extensions ─────────────────────── */
+
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-raised: #f1f5f9;
+  --surface-hover: #e2e8f0;
+  --border: #cbd5e1;
+  --border-soft: rgba(0, 0, 0, 0.08);
+  --text: #0f172a;
+  --muted: #475569;
+  --subtle: #64748b;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] body {
+  background: #f8fafc;
+  color: var(--text);
+}
+
+[data-theme="light"] .sidebar {
+  background: #ffffff;
+  border-right-color: var(--border);
+}
+
+[data-theme="light"] .topbar {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+[data-theme="light"] .global-search,
+[data-theme="light"] .filter-bar,
+[data-theme="light"] .task-card,
+[data-theme="light"] .kpi-card,
+[data-theme="light"] .analytics-panel,
+[data-theme="light"] .settings-section {
+  background: #ffffff;
+  border-color: var(--border);
+}
+
+[data-theme="light"] .global-search input,
+[data-theme="light"] .filter-search input {
+  color: var(--text);
+}
+
+/* ─── Role Badges & Status Pills ────────────────────────────────────────────── */
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.role-badge--super_admin { background: rgba(141, 130, 255, 0.16); color: #9a91ff; border: 1px solid rgba(141, 130, 255, 0.3); }
+.role-badge--admin { background: rgba(112, 167, 255, 0.16); color: #70a7ff; border: 1px solid rgba(112, 167, 255, 0.3); }
+.role-badge--manager { background: rgba(233, 184, 108, 0.16); color: #e9b86c; border: 1px solid rgba(233, 184, 108, 0.3); }
+.role-badge--employee { background: rgba(90, 201, 154, 0.16); color: #5ac99a; border: 1px solid rgba(90, 201, 154, 0.3); }
+
+.priority-pill {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.priority-pill--urgent { background: rgba(239, 115, 126, 0.2); color: #ef737e; border: 1px solid rgba(239, 115, 126, 0.35); }
+.priority-pill--high { background: rgba(242, 142, 43, 0.2); color: #f28e2b; border: 1px solid rgba(242, 142, 43, 0.35); }
+.priority-pill--medium { background: rgba(112, 167, 255, 0.16); color: #70a7ff; border: 1px solid rgba(112, 167, 255, 0.3); }
+.priority-pill--low { background: rgba(90, 201, 154, 0.16); color: #5ac99a; border: 1px solid rgba(90, 201, 154, 0.3); }
+
+.status-pill {
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.status-pill--backlog { background: #1c2438; color: #8d98b2; }
+.status-pill--todo { background: #182848; color: #70a7ff; }
+.status-pill--in_progress { background: #26214d; color: #a49aff; }
+.status-pill--in_review { background: #3b2c17; color: #e9b86c; }
+.status-pill--blocked { background: #3b1820; color: #ef737e; }
+.status-pill--done { background: #17382b; color: #5ac99a; }
+
+/* ─── Kanban Board ──────────────────────────────────────────────────────────── */
+.kanban-wrapper {
+  overflow-x: auto;
+  padding-bottom: 24px;
+}
+.kanban-board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(280px, 1fr));
+  gap: 16px;
+  min-width: 1720px;
+}
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-height: 600px;
+  padding: 12px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+.kanban-column--dragover {
+  background: var(--surface-raised);
+  border-color: var(--violet);
+}
+.kanban-column-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  margin-bottom: 12px;
+}
+.kanban-column-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.kanban-column-header h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+.kanban-column-count {
+  margin-left: auto;
+  background: var(--surface-raised);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+}
+.kanban-add-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.kanban-add-btn:hover {
+  color: var(--text);
+  border-color: var(--violet);
+}
+.kanban-column-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.kanban-empty-dropzone {
+  display: grid;
+  place-items: center;
+  flex: 1;
+  border: 1px dashed var(--border-soft);
+  border-radius: 8px;
+  min-height: 100px;
+  color: var(--subtle);
+  font-size: 12px;
+}
+.kanban-card {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: grab;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.kanban-card:hover {
+  border-color: rgba(141, 130, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+.kanban-card--overdue {
+  border-left: 3px solid var(--red);
+}
+.kanban-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.kanban-card-code {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--subtle);
+}
+.kanban-card-title {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+.kanban-card-project {
+  margin-bottom: 8px;
+}
+.project-badge {
+  font-size: 11px;
+  color: var(--blue);
+  background: rgba(112, 167, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.kanban-card-blocked {
+  background: rgba(239, 115, 126, 0.1);
+  border: 1px solid rgba(239, 115, 126, 0.25);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  color: var(--red);
+  margin-bottom: 8px;
+}
+.kanban-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 11px;
+}
+.kanban-card-due {
+  color: var(--muted);
+}
+.kanban-card-due.is-overdue {
+  color: var(--red);
+  font-weight: 600;
+}
+.kanban-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 6px;
+}
+.kanban-shift-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 3px;
+  font-size: 10px;
+  padding: 1px 6px;
+  cursor: pointer;
+}
+.kanban-shift-btn:hover {
+  color: var(--text);
+  border-color: var(--violet);
+}
+
+/* ─── Calendar View ─────────────────────────────────────────────────────────── */
+.calendar-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+}
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.calendar-nav h2 {
+  margin: 0 0 0 10px;
+  font-size: 18px;
+  font-weight: 700;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.calendar-day-header {
+  background: var(--surface-raised);
+  padding: 10px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.calendar-cell {
+  background: var(--surface);
+  min-height: 110px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.15s;
+}
+.calendar-cell:hover {
+  background: var(--surface-hover);
+}
+.calendar-cell--empty {
+  background: rgba(0, 0, 0, 0.05);
+}
+.calendar-cell--today {
+  background: rgba(141, 130, 255, 0.05);
+}
+.calendar-cell-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.calendar-date-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.calendar-date-number--today {
+  background: var(--violet);
+  color: #ffffff;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+.calendar-day-count {
+  font-size: 10px;
+  background: var(--surface-raised);
+  padding: 1px 5px;
+  border-radius: 8px;
+  color: var(--subtle);
+}
+.calendar-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+.calendar-task-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.calendar-task-chip .chip-code {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--muted);
+}
+.calendar-task-chip .chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.calendar-task-chip.is-done {
+  opacity: 0.6;
+  text-decoration: line-through;
+}
+.calendar-chip--urgent { border-left: 3px solid var(--red); }
+.calendar-chip--high { border-left: 3px solid #f28e2b; }
+.calendar-chip--medium { border-left: 3px solid var(--blue); }
+.calendar-chip--low { border-left: 3px solid var(--green); }
+.calendar-more-badge {
+  font-size: 10px;
+  color: var(--violet);
+  margin-top: 2px;
+  text-align: center;
+}
+
+/* ─── Employees & Departments ───────────────────────────────────────────────── */
+.employees-view, .departments-view, .projects-view, .crm-view, .reports-view, .activity-view, .notifications-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.view-header h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.view-header p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.employees-controls, .crm-controls, .activity-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.filter-dropdowns {
+  display: flex;
+  gap: 10px;
+}
+.filter-dropdowns select, .activity-controls select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.employees-grid, .departments-grid, .projects-grid, .clients-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+  gap: 16px;
+}
+.employee-card, .department-card, .project-card, .client-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+.employee-card:hover, .department-card:hover, .project-card:hover, .client-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(141, 130, 255, 0.4);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+.employee-card-header, .department-card-top, .project-card-header, .client-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+.employee-avatar, .persona-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #70a7ff, #8d82ff);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 16px;
+}
+.employee-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.employee-id {
+  font-family: monospace;
+  font-size: 11px;
+  color: var(--subtle);
+  font-weight: 600;
+}
+.employee-name {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+.employee-designation {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--violet);
+  font-weight: 500;
+}
+.employee-dept, .employee-email {
+  margin: 2px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.employee-workload-bar, .department-metrics, .project-meta-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: var(--surface-raised);
+  padding: 10px;
+  border-radius: 6px;
+  margin: 14px 0;
+  text-align: center;
+}
+.workload-stat span, .metric-box span, .meta-label {
+  display: block;
+  font-size: 10px;
+  color: var(--subtle);
+  text-transform: uppercase;
+}
+.workload-stat strong, .metric-box strong {
+  font-size: 14px;
+  color: var(--text);
+}
+.workload-stat--overdue strong, .text-red {
+  color: var(--red) !important;
+}
+.text-amber { color: var(--amber) !important; }
+.text-green { color: var(--green) !important; }
+
+/* ─── Departments ───────────────────────────────────────────────────────────── */
+.dept-code-badge {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--blue);
+}
+.department-desc {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 14px;
+  line-height: 1.4;
+}
+.department-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.head-info, .owner-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── Progress Bars ─────────────────────────────────────────────────────────── */
+.progress-bar-container, .project-progress-section {
+  margin-top: auto;
+  margin-bottom: 14px;
+}
+.progress-bar-labels, .progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.progress-bar-track, .progress-track, .table-progress {
+  height: 6px;
+  background: var(--surface-raised);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-bar-fill, .progress-fill, .table-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--violet));
+  border-radius: 3px;
+}
+
+/* ─── Client CRM ────────────────────────────────────────────────────────────── */
+.crm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.stage-pill {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.stage-pill--won { background: rgba(90, 201, 154, 0.2); color: #5ac99a; border: 1px solid rgba(90, 201, 154, 0.35); }
+.stage-pill--progress { background: rgba(233, 184, 108, 0.2); color: #e9b86c; border: 1px solid rgba(233, 184, 108, 0.35); }
+.stage-pill--new { background: rgba(112, 167, 255, 0.2); color: #70a7ff; border: 1px solid rgba(112, 167, 255, 0.35); }
+.client-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+.client-action-box {
+  background: var(--surface-raised);
+  border-left: 3px solid var(--violet);
+  padding: 8px 10px;
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.client-action-box span {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--subtle);
+  display: block;
+}
+.client-action-box p {
+  margin: 2px 0 4px;
+  font-weight: 600;
+  color: var(--text);
+}
+.client-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-soft);
+}
+
+/* ─── Enterprise Tables ─────────────────────────────────────────────────────── */
+.table-responsive {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.enterprise-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.enterprise-table th {
+  background: var(--surface-raised);
+  padding: 12px 14px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.enterprise-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+}
+.enterprise-table tr:last-child td {
+  border-bottom: none;
+}
+.enterprise-table tr:hover td {
+  background: var(--surface-hover);
+}
+.action-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: monospace;
+}
+.action-badge--green { background: rgba(90, 201, 154, 0.15); color: #5ac99a; }
+.action-badge--red { background: rgba(239, 115, 126, 0.15); color: #ef737e; }
+.action-badge--blue { background: rgba(112, 167, 255, 0.15); color: #70a7ff; }
+.action-badge--violet { background: rgba(141, 130, 255, 0.15); color: #a49aff; }
+.entity-tag {
+  background: var(--surface-raised);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--subtle);
+}
+
+/* ─── Modals & Forms ────────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.modal-dialog {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: min(500px, 95vw);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.modal-dialog--wide {
+  width: min(680px, 95vw);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.modal-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+.modal-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.modal-close {
+  background: transparent;
+  border: 0;
+  font-size: 18px;
+  color: var(--muted);
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+.modal-close:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--surface-raised);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.form-input, .form-select, .form-textarea {
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 2px rgba(141, 130, 255, 0.2);
+}
+.form-error-banner {
+  background: rgba(239, 115, 126, 0.15);
+  border: 1px solid rgba(239, 115, 126, 0.35);
+  color: #ef737e;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+.form-success-banner {
+  background: rgba(90, 201, 154, 0.15);
+  border: 1px solid rgba(90, 201, 154, 0.35);
+  color: #5ac99a;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.assignees-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 130px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  background: var(--surface-raised);
+}
+.assignee-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.assignee-pill.is-selected {
+  background: rgba(141, 130, 255, 0.2);
+  border-color: var(--violet);
+  color: #b5aaff;
+}
+.mini-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #70a7ff, #8d82ff);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* ─── Demo Personas Selector ────────────────────────────────────────────────── */
+.demo-personas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.demo-persona-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+.demo-persona-card:hover {
+  border-color: var(--violet);
+  background: var(--surface-hover);
+}
+.persona-copy {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.persona-copy strong { font-size: 13px; color: var(--text); }
+.persona-copy span { font-size: 11px; color: var(--violet); }
+.persona-copy small { font-size: 11px; color: var(--subtle); }
+
+/* ─── Topbar Persona Quick Switcher ─────────────────────────────────────────── */
+.topbar-persona-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 10px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.topbar-persona-btn:hover {
+  border-color: var(--violet);
+}
+.theme-toggle-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 16px;
+}
+.theme-toggle-btn:hover {
+  background: var(--surface-hover);
+}
+
+/* ─── Comments in Drawer ────────────────────────────────────────────────────── */
+.task-comments-section {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border-soft);
+}
+.task-comments-section h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+.comments-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 250px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+.comment-bubble {
+  background: var(--surface-raised);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  padding: 10px;
+}
+.comment-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.comment-header strong { font-size: 12px; }
+.comment-header small { color: var(--subtle); margin-left: auto; font-size: 10px; }
+.comment-text {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.4;
+}
+.comment-input-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ─── Notification Center ───────────────────────────────────────────────────── */
+.notifications-tabs, .status-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-soft);
+  padding-bottom: 10px;
+}
+.tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tab-btn.is-active {
+  background: rgba(141, 130, 255, 0.15);
+  color: var(--violet);
+}
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.notification-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  position: relative;
+  transition: border-color 0.15s;
+}
+.notification-card--unread {
+  border-left: 3px solid var(--violet);
+  background: var(--surface-raised);
+}
+.notif-icon {
+  font-size: 20px;
+}
+.notif-content {
+  flex: 1;
+}
+.notif-top {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+.notif-top h4 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.notif-date {
+  font-size: 11px;
+  color: var(--subtle);
+}
+.notif-content p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.unread-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--violet);
+  position: absolute;
+  top: 14px;
+  right: 14px;
+}

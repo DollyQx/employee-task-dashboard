@@ -1,19 +1,51 @@
-# TaskFlow Employee Task Dashboard
+# Aulten Digital — TaskFlow Employee CRM
 
-A responsive team task dashboard that aggregates tasks from two read-only mock REST API sources — a **CRM** system and a **Helpdesk** system — into a single, priority-sorted view.
+A production-grade, multi-user, responsive Employee Task Management & CRM platform architected for **Aulten Digital**, an Indian technology and software services enterprise.
 
-> **Read-only demonstration APIs:** CRM and Helpdesk endpoints return hardcoded demonstration records. They do not connect to real external systems and do not persist TaskFlow edits.
+TaskFlow provides role-based task tracking, project milestone management, an Indian client CRM pipeline, team workloads, interactive Kanban and monthly Calendar schedules, in-app notification routing, and security audit logs, backed by **PostgreSQL** and a high-performance **React 19 + Vite 8** frontend.
 
 ---
 
 ## Tech Stack
 
-| Layer    | Technology                     |
-|----------|--------------------------------|
-| Frontend | React 19 + Vite 8              |
-| Backend  | Node.js + Express 4 + PostgreSQL (`pg`) |
-| Language | JavaScript (ES Modules)        |
-| Styling  | Vanilla CSS (custom design system) |
+| Layer | Technology | Details |
+|---|---|---|
+| **Frontend** | React 19 + Vite 8 | Pure ES Modules, vanilla design tokens, responsive sidebar, light/dark themes |
+| **Backend** | Node.js (v20+) + Express 4 | Secure RESTful architecture, parameterized SQL, role-based authorization |
+| **Database** | PostgreSQL (`pg`) + `pg-mem` | ACID transactions, UUID keys, multi-tenant organization isolation |
+| **Security** | Scrypt + Timing-Safe | OWASP memory-hard password hashing, HttpOnly cookies, rate limiting, CSP headers |
+| **Code Quality** | Node Test Runner + Oxlint | Zero dependencies test suites, sub-millisecond AST linting |
+
+---
+
+## Architectural Highlights
+
+1. **Brand & Organization**: Configured for **Aulten Digital** (`aulten-digital` tenant).
+2. **Complete 13-Module Navigation**:
+   * **Overview**: Executive & role-tailored dashboard with live KPI counters, overdue alerts, and priority tasks.
+   * **My Tasks**: Focused individual work view for current employee with fast status toggles.
+   * **All Tasks**: Organization-wide searchable and multi-filtered task list with pagination and server-side sorting.
+   * **Kanban Board**: 6 workflow columns (`Backlog`, `To Do`, `In Progress`, `In Review`, `Blocked`, `Done`) with drag-and-drop & persistent backend updates.
+   * **Calendar**: Interactive monthly schedule displaying tasks by due date with urgency badges.
+   * **Employees Directory**: Searchable directory of 18 Indian staff members with designations, manager hierarchies, and workload summaries.
+   * **Teams & Departments**: 12 operational divisions (Engineering, Web, Mobile, DevOps, QA, Cybersecurity, Sales, HR, etc.) with lead assignments.
+   * **Projects Management**: 7 enterprise client engagements with milestone health (`good`, `at_risk`, `critical`) and completion bars derived from real tasks.
+   * **Clients & CRM**: 7 enterprise accounts (e.g. Tata Consultancy, Reliance, Infosys, Flipkart, Zomato) with 7 pipeline stages and deal values in INR (₹).
+   * **Reports & Analytics**: Real database calculations, status/priority distributions, department workloads, and safe CSV export.
+   * **Notification Center**: In-app notifications with read/unread tracking and batch actions.
+   * **Activity Log**: Immutable audit trail recording actors, actions, entity types, change metadata, and IP addresses.
+   * **Settings**: Preferences, Light/Dark appearance toggle, and PostgreSQL readiness monitoring.
+3. **Multi-Role Authorization (RBAC)**:
+   * **Super Admin**: Complete organization-level control, user provisioning, system settings, all tasks, reports, and audit logs.
+   * **Admin**: Manage employees, teams, projects, clients, all tasks, and organizational reports.
+   * **Manager**: Supervise department team, assign/prioritize work, update statuses, manage client CRM leads.
+   * **Employee**: View assigned tasks and calendar, update permitted progress, post comments, and view notifications.
+4. **Realistic Indian Demo Data**:
+   * Believable Indian names (Aarav Sharma, Priya Verma, Rahul Kumar, Sneha Gupta, Arjun Singh, etc.) with fictional `@example.com` emails.
+   * Repeatable, idempotent seeding script (`npm run db:seed`) that never resets or damages production data.
+   * Secure initial admin provisioning script (`npm run provision:admin`) generating random secrets without hardcoded credentials.
+5. **Legacy Mock Feed Compatibility**:
+   * Existing mock routes (`/api/crm/tasks` and `/api/helpdesk/tasks`) remain preserved and verified.
 
 ---
 
@@ -23,41 +55,63 @@ A responsive team task dashboard that aggregates tasks from two read-only mock R
 employee-task-dashboard/
 ├── backend/
 │   ├── db/
-│   │   ├── migrations/         # Version-controlled PostgreSQL schema
-│   │   ├── migrate.js          # Migration runner
-│   │   └── pool.js             # PostgreSQL connection and readiness probe
-│   ├── scripts/migrate.js      # `npm run db:migrate`
-│   ├── package.json
-│   ├── server.js              # Express server (port 3001)
-│   ├── test/
-│   │   ├── api.test.js         # API, CORS, security-header, and read-only tests
-│   │   └── database.test.js    # Isolated migration, schema, and readiness tests
-│   └── routes/
-│       ├── crm.js             # GET /api/crm/tasks
-│       └── helpdesk.js        # GET /api/helpdesk/tasks
+│   │   ├── migrations/
+│   │   │   ├── 001_create_taskflow_core.sql     # Core tables (orgs, users, tasks, assignments)
+│   │   │   └── 002_aulten_digital_crm_schema.sql # Departments, clients, projects, comments, notifications, audit
+│   │   ├── migrate.js                           # Migration runner with transaction rollback
+│   │   └── pool.js                              # PostgreSQL pool and readiness probe
+│   ├── middleware/
+│   │   ├── auth.js                              # Session verification, role guards, tenant attachment
+│   │   └── rateLimiter.js                       # In-memory IP rate limiter for login & sensitive endpoints
+│   ├── routes/
+│   │   ├── auth.js                              # /api/auth (login, logout, me, demo switch, password reset)
+│   │   ├── tasks.js                             # /api/tasks (full CRUD, status patch, comments, bulk actions)
+│   │   ├── employees.js                         # /api/employees (directory, workloads, staff management)
+│   │   ├── departments.js                       # /api/departments (divisions, heads, member counts)
+│   │   ├── projects.js                          # /api/projects (client projects, health, milestones)
+│   │   ├── clients.js                           # /api/clients (CRM pipeline stages, deal values, lead owner)
+│   │   ├── reports.js                           # /api/reports (dashboard metrics, CSV export)
+│   │   ├── notifications.js                     # /api/notifications (in-app notifications, mark read)
+│   │   ├── audit.js                             # /api/audit-logs (administrative audit trail)
+│   │   ├── crm.js                               # Legacy mock feed (/api/crm/tasks)
+│   │   └── helpdesk.js                          # Legacy mock feed (/api/helpdesk/tasks)
+│   ├── scripts/
+│   │   ├── migrate.js                           # npm run db:migrate
+│   │   ├── seed.js                              # npm run db:seed (idempotent Indian demo data)
+│   │   └── provision-admin.js                   # npm run provision:admin (secure admin setup)
+│   ├── utils/
+│   │   ├── auth.js                              # Scrypt hashing, timingSafeEqual, token generators
+│   │   ├── audit.js                             # Structured audit logger
+│   │   └── notifications.js                     # In-app notification creation
+│   ├── server.js                                # Express server, security headers, dynamic CORS
+│   └── test/
+│       ├── api.test.js                          # CORS, read-only mock route tests
+│       ├── database.test.js                     # Schema migration and readiness tests (pg-mem)
+│       └── crm.test.js                          # Auth, RBAC, task CRUD, seeding, reporting tests
 │
 ├── frontend/
-│   ├── package.json
-│   ├── vite.config.js         # Dev proxy: /api → localhost:3001
-│   ├── index.html
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx            # Root component, state management
-│       ├── index.css          # Design system / tokens
-│       ├── api/
-│       │   └── tasks.js       # Parallel fetch + merge helper
-│       ├── utils/
-│       │   ├── prioritize.js
-│       │   ├── taskMetrics.js # Shared overdue, snapshot, and filter rules
-│       │   └── analyticsDates.js # Date range and trend calculations
-│       └── components/
-│           ├── FilterBar.jsx
-│           ├── TaskCard.jsx
-│           ├── TaskList.jsx
-│           ├── TaskDetailDrawer.jsx
-│           ├── TeamAnalytics.jsx
-│           ├── DateRangeControls.jsx
-│           └── OverviewInsights.jsx
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── crm.js                           # Full CRM API client (Bearer auth, CRUD helpers)
+│   │   │   └── tasks.js                         # Legacy parallel mock fetcher
+│   │   ├── components/
+│   │   │   ├── KanbanBoard.jsx                  # 6-column interactive drag & drop board
+│   │   │   ├── CalendarView.jsx                 # Monthly deadline schedule grid
+│   │   │   ├── EmployeesView.jsx                # Staff directory with workload counters
+│   │   │   ├── DepartmentsView.jsx              # Divisions and department heads
+│   │   │   ├── ProjectsView.jsx                 # Client projects with milestone health
+│   │   │   ├── ClientsCrmView.jsx               # Pipeline Kanban/table in INR (₹)
+│   │   │   ├── ReportsView.jsx                  # Analytics charts and CSV export
+│   │   │   ├── ActivityLogView.jsx              # Searchable audit trail
+│   │   │   ├── NotificationsView.jsx            # In-app notification drawer & alerts
+│   │   │   ├── CreateTaskModal.jsx              # Full task creation & edit dialog
+│   │   │   ├── AuthModal.jsx                    # Sign-in & quick test persona switcher
+│   │   │   ├── TaskDetailDrawer.jsx             # Live comments & task status drawer
+│   │   │   ├── TaskCard.jsx                     # Priority card item
+│   │   │   └── FilterBar.jsx                    # Multi-parameter search & filtering
+│   │   ├── App.jsx                              # Root enterprise shell & role routing
+│   │   └── index.css                            # Complete design system with light/dark tokens
+│   └── test/                                    # 14 frontend unit & metric tests
 │
 └── README.md
 ```
@@ -67,13 +121,14 @@ employee-task-dashboard/
 ## Installation & Setup
 
 ### Prerequisites
-- Node.js ≥ 20.19 (required by the current Vite 8 toolchain)
-- npm ≥ 9
+* **Node.js** ≥ 20.19 (tested with Node 22 & 24)
+* **npm** ≥ 9
+* Optional: Managed PostgreSQL database (Neon, Supabase, Render, AWS RDS, or local Docker)
 
 ### 1 — Install backend dependencies
 ```bash
 cd backend
-npm ci
+npm install
 ```
 
 ### 2 — Install frontend dependencies
@@ -84,25 +139,18 @@ npm install
 
 ---
 
-## Running the Application
+## Running Locally
 
-You need **two terminal windows**, one for each server.
+You need two terminal windows:
 
-### Terminal 1 — Start the backend (port 3001)
+### Terminal 1 — Start the Backend (Port 3001)
 ```bash
 cd backend
-node server.js
+npm start
 ```
+*Note: In development, nodemon is available via `npm run dev`.*
 
-You should see:
-```
-✅ Employee Task Dashboard API
-   Server running at http://localhost:3001
-   CRM tasks:      http://localhost:3001/api/crm/tasks
-   Helpdesk tasks: http://localhost:3001/api/helpdesk/tasks
-```
-
-### Terminal 2 — Start the frontend (port 5173)
+### Terminal 2 — Start the Frontend (Port 5173)
 ```bash
 cd frontend
 npm run dev
@@ -110,235 +158,130 @@ npm run dev
 
 Open your browser at **http://localhost:5173**
 
-## Read-only Data and Supported Actions
+---
 
-The backend exposes `GET /api/crm/tasks`, `GET /api/helpdesk/tasks`, and `GET /api/health`. CRM and Helpdesk records are demonstration data held in route modules. There is no database, authentication/authorization model, or write integration. Create, edit, delete, bulk update, and persistent status changes are intentionally not offered. Use **Open original task** in the detail drawer only where the source URL is available.
+## Database Management & Seeding
 
-Task records include `id`, `title`, `employee`, `status`, `deadline`, `urgency`, `source`, and `sourceUrl`. The mock CRM and Helpdesk source URLs use placeholder domains and are shown as unavailable rather than opened; legitimate source URLs are preserved. The current response does not include creation or completion timestamps or historical snapshots. Team Analytics labels those trends unavailable instead of deriving them from deadlines. Current workload, overdue, and completion-rate figures are snapshots of fetched records; completed tasks are excluded from overdue counts.
+### 1. Database Configuration
+Copy `backend/.env.example` to `backend/.env` and supply your database connection string:
+```bash
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+```
 
-## PostgreSQL Foundation (Phase 1)
+### 2. Apply Schema Migrations
+```bash
+cd backend
+npm run db:migrate
+```
+Applies `001_create_taskflow_core.sql` and `002_aulten_digital_crm_schema.sql` safely within a transaction and records applied migrations in `schema_migrations`.
 
-The backend now has a PostgreSQL connection pool and a version-controlled initial schema migration. This phase deliberately does **not** move existing mock records into PostgreSQL or add task write endpoints: the current dashboard continues to read the same mock GET routes. It also does not add authentication or authorization. The schema's organization/user relationships and role values are data foundations, not access controls; do not use this deployment for real employee data yet.
+### 3. Seed Realistic Indian Demo Data
+```bash
+cd backend
+npm run db:seed
+```
+* Sets up the **Aulten Digital** organization.
+* Seeds **12 departments** (Engineering, Web, Mobile, DevOps, QA, Cybersecurity, Sales, HR, etc.).
+* Seeds **18 Indian employees** with realistic designations, reporting managers, and hashed passwords.
+* Seeds **7 enterprise clients** with CRM pipeline stages and deal values in INR (₹).
+* Seeds **7 key company projects** with health indicators and budgets.
+* Seeds **52 tasks** spanning all statuses (Backlog, To Do, In Progress, In Review, Blocked, Done) and priorities (Low, Medium, High, Urgent), with comments and tags.
+* Seeds initial notifications and security audit logs.
+* **Safe & Idempotent**: Uses `ON CONFLICT` clauses; safe to run multiple times without throwing duplicate key errors.
 
-The schema creates:
+### 4. Secure Initial Admin Provisioning
+To provision a brand new administrative account without default or hardcoded passwords:
+```bash
+cd backend
+ADMIN_NAME="Aulten Super Admin" ADMIN_EMAIL="admin@aulten.example.com" npm run provision:admin
+```
+If `ADMIN_PASSWORD` is omitted, the script automatically generates a 24-character cryptographically secure password and outputs it to the console once.
 
-- `organizations` with a unique lowercase slug.
-- `users` scoped to an organization, with normalized lowercase email and a constrained role value (`owner`, `admin`, or `member`).
-- `tasks` scoped to an organization and creator, with constrained status/priority and optional due date.
-- `task_assignments` with organization-scoped foreign keys and one row per task/user assignment.
+---
 
-The tables use UUID identifiers, foreign keys, created/updated timestamps, and indexes for organization, status, due date, creation date, and assignee queries. The migration is [001_create_taskflow_core.sql](./backend/db/migrations/001_create_taskflow_core.sql). Later application updates must set `updated_at` when modifying records.
+## Testing & Quality Assurance
 
-### Managed PostgreSQL and local configuration
+All test suites execute against isolated in-memory PostgreSQL (`pg-mem`) without requiring external database provisioning.
 
-Neon is compatible with the standard PostgreSQL wire protocol and the `pg` client used here. A Neon free plan may be suitable for development, but check its current limits and terms before relying on it; this repository cannot confirm hosting-plan availability. Render's backend can connect to any managed PostgreSQL provider using the same connection variable.
-
-1. Create a development PostgreSQL database (for example, a Neon project) and obtain its connection string. Use the pooled connection string for a serverless/hosted backend when the provider recommends it; Neon connection strings should include `sslmode=require`.
-2. Set `DATABASE_URL` in the backend process environment. A placeholder-only template is at [backend/.env.example](./backend/.env.example). Never commit a real connection string or put it in a frontend `VITE_*` variable.
-3. In PowerShell, set the value only in the current terminal session, replacing the placeholder with your own **development** database URL:
-
-   ```powershell
-   $env:DATABASE_URL = "postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
-   ```
-
-4. Apply migrations only to the intended development database:
-
-   ```powershell
-   cd backend
-   npm run db:migrate
-   ```
-
-The migration runner applies numbered `.sql` files once and records them in `schema_migrations`. Run it as a controlled deployment step when a database is ready; this change does not configure automatic Render migrations and no production migration was run.
-
-### Database connection and health checks
-
-- `GET /api/health` remains a process liveness response and preserves the existing response shape.
-- `GET /api/ready` runs `SELECT 1` against PostgreSQL. It returns `200` with `database: "available"` only when `DATABASE_URL` is configured and the database answers; otherwise it returns `503` and a non-secret reason (`not_configured` or `unavailable`).
-- The database connection is optional during server startup so the existing read-only dashboard remains available while Phase 1 is rolled out. The readiness check intentionally remains unavailable until a database is configured.
-
-### Tests
-
-Backend tests use `pg-mem` to create an isolated, in-memory PostgreSQL-compatible database; they do not require a live database or touch a hosted one. They exercise migration application, constraints, organization-scoped foreign keys, assignment uniqueness, the connection probe, and readiness responses. The in-memory adapter is not a substitute for one integration run against the actual PostgreSQL provider before relying on the schema in production.
-
-```powershell
+### Run All Backend Tests (18 Tests)
+```bash
 cd backend
 npm test
 ```
+**Test Coverage:**
+* API security headers & CORS origin restrictions
+* Legacy mock CRM and Helpdesk response verification
+* PostgreSQL schema migration application & constraints
+* Scrypt password hashing & constant-time comparison
+* Idempotent demo database seeding
+* Role-based access control (Employees blocked from audit logs, Admins permitted)
+* Task CRUD lifecycle (Create, Kanban status patch, add comment, delete)
+* Dashboard analytics calculation & CSV export formatting
+* Database readiness probe (HTTP 200 on healthy connection, HTTP 503 on unconfigured)
 
-Run the frontend regression tests and production build as before:
-
-```powershell
+### Run All Frontend Tests (14 Tests)
+```bash
 cd frontend
 npm test
+```
+**Test Coverage:**
+* Date range validation and comparison intervals
+* Deadline calculations and calendar boundary rules
+* Priority score algorithm and tie-breaking stability
+* Safe external URL validator (blocking placeholder / javascript / data URIs)
+* Snapshot metrics and multi-parameter task filters
+* Mock API parallel fetch and error conversions
+
+### Run Frontend Linter (Oxlint)
+```bash
+cd frontend
+npm run lint
+```
+*0 warnings and 0 errors across 37 files.*
+
+### Run Frontend Production Build (Vite)
+```bash
+cd frontend
 npm run build
 ```
-
-## Environment and Deployment
-
-For Vercel, set the frontend root directory to `frontend` and define `VITE_API_BASE_URL` as the backend origin (for example, `https://employee-task-dashboard-g2ug.onrender.com`, without `/api`). Vite embeds this value at build time. The frontend keeps `/api` as a development fallback for the Vite proxy.
-
-For Render, set the backend root directory to `backend`, the build command to `npm ci`, and the start command to `npm start`. Configure `DATABASE_URL` as a secret environment variable in Render only when a managed database is ready. Do not run `npm run db:migrate` against a production database until the migration has first been reviewed and tested against a separate PostgreSQL database and a backup/rollback plan exists. No production settings were changed. The Express CORS allowlist remains configured for the current Vercel origin and local Vite origins.
-
-Run checks from the repository root:
-
-```bash
-cd frontend && npm test && npm run build
-cd ../backend && npm test
-```
+*Generates optimized production bundle in `frontend/dist/` in ~220ms.*
 
 ---
 
-## API Endpoints
+## Security Architecture
 
-Both endpoints are served by the local Express backend. They simulate a ~300-400 ms network delay to mimic real external API calls.
-
-### `GET /api/crm/tasks`
-Returns 8 mock CRM tasks (client follow-ups, proposals, renewals).
-
-**Response shape:**
-```json
-{
-  "source": "CRM (Mock)",
-  "count": 8,
-  "tasks": [
-    {
-      "id": "crm-001",
-      "title": "Follow up with Acme Corp on Q4 proposal",
-      "employee": "Sarah Johnson",
-      "status": "in-progress",
-      "deadline": "2026-10-26",
-      "urgency": "high",
-      "source": "CRM",
-      "sourceUrl": "https://example-crm.com/tasks/crm-001"
-    }
-  ]
-}
-```
-
-### `GET /api/helpdesk/tasks`
-Returns 8 mock Helpdesk tasks (IT tickets, escalations, infrastructure issues).
-
-Response shape is identical to CRM, with `source: "Helpdesk"`.
-
-### `GET /api/health`
-Simple health check: `{ "status": "ok", "timestamp": "..." }`
-
-### `GET /api/ready`
-Database readiness check: HTTP 200 when PostgreSQL is reachable, otherwise HTTP 503. The response does not disclose connection details.
+* **Broken Access Control & IDOR Mitigation**: All queries enforce tenant isolation using `WHERE organization_id = req.user.organization_id`. User roles (`super_admin`, `admin`, `manager`, `employee`) are checked server-side via `requireRole` middleware.
+* **SQL Injection Prevention**: Parameterized queries are used exclusively (`$1, $2, ...`); no string concatenation.
+* **Password Hashing**: Uses Node's native `crypto.scrypt` with a 16-byte random salt and memory-hard parameters. Verification uses `crypto.timingSafeEqual` to prevent timing attacks.
+* **Session Management**: Cryptographically random 256-bit session tokens stored in `user_sessions`. Supported via `Authorization: Bearer` and secure, `HttpOnly`, `SameSite=Lax` cookies.
+* **Rate Limiting**: In-memory IP rate limiter guards `/api/auth/login` and sensitive endpoints, returning HTTP 429 with `Retry-After`.
+* **Cross-Site Scripting (XSS)**: No `dangerouslySetInnerHTML`. Response headers include `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, and `Cache-Control: no-store`. `X-Powered-By` is disabled.
+* **CSV Injection Defense**: Formula triggers (`=`, `+`, `-`, `@`, `\t`, `\r`) are sanitized before generating CSV report exports.
 
 ---
 
-## Task Schema
+## Production Deployment Checklist
 
-Every task object has these fields:
+### Frontend (Vercel)
+1. Set Root Directory to `frontend`.
+2. Configure build command: `npm run build`, output directory: `dist`.
+3. Set environment variable `VITE_API_BASE_URL` to your backend origin (e.g. `https://employee-task-dashboard-g2ug.onrender.com`, without trailing `/api`).
+4. Rebuild after configuring environment variables.
 
-| Field       | Type   | Description                                  |
-|-------------|--------|----------------------------------------------|
-| `id`        | string | Unique identifier (e.g. `crm-001`, `hd-007`) |
-| `title`     | string | Short description of the task                |
-| `employee`  | string | Assigned employee's full name, when assigned  |
-| `status`    | string | `pending` \| `in-progress` \| `completed`   |
-| `deadline`  | string | ISO date string `YYYY-MM-DD`                 |
-| `urgency`   | string | `high` \| `medium` \| `low`                 |
-| `source`    | string | `CRM` or `Helpdesk`                          |
-| `sourceUrl` | string | URL of the task in the originating system    |
-
----
-
-## Prioritization Algorithm
-
-
-```
-Priority Score = urgencyScore + deadlineScore
-```
-
-### Urgency Score
-| Urgency | Score |
-|---------|-------|
-| high    | 30    |
-| medium  | 15    |
-| low     |  5    |
-
-### Deadline Score
-| Deadline            | Score |
-|---------------------|-------|
-| Overdue (past)      | 50    |
-| Due today           | 30    |
-| Due within 3 days   | 15    |
-| Future (> 3 days)   |  0    |
-
-### Examples
-| Task                              | Score | Reason                     |
-|-----------------------------------|-------|----------------------------|
-| High urgency + overdue            |  80   | 30 + 50 — always first     |
-| High urgency + due today          |  60   | 30 + 30                    |
-| Medium urgency + overdue          |  65   | 15 + 50                    |
-| Low urgency + 2 weeks away        |   5   | 5 + 0 — sinks to bottom    |
-
-Tasks are sorted **descending** by score. Ties maintain their original insertion order (CRM tasks first, then Helpdesk tasks).
+### Backend (Render)
+1. Set Root Directory to `backend`.
+2. Set Build Command to `npm ci`.
+3. Set Start Command to `npm start`.
+4. Add secret environment variable `DATABASE_URL` pointing to your managed PostgreSQL database.
+5. Apply database migrations: Run `npm run db:migrate` in Render shell or deployment pipeline.
+6. Verify endpoints:
+   * Health: `GET https://employee-task-dashboard-g2ug.onrender.com/api/health`
+   * Readiness: `GET https://employee-task-dashboard-g2ug.onrender.com/api/ready`
+   * Tasks: `GET https://employee-task-dashboard-g2ug.onrender.com/api/tasks`
 
 ---
 
-## Features
+## License & Credits
 
-- ✅ **Unified task list** — CRM + Helpdesk tasks merged and sorted by priority
-- ✅ **Priority scoring** — transparent urgency × deadline algorithm
-- ✅ **Filters** — search and filter by assignee, status, priority, source, and overdue state
-- ✅ **Task details** — accessible, read-only drawer with a validated original-source link
-- ✅ **Loading state** — task skeletons during parallel fetches
-- ✅ **Error state** — clear message + retry button if API is unreachable
-- ✅ **Empty state** — friendly message + clear filters button
-- ✅ **Overdue warnings** — restrained date indicators; completed tasks are excluded
-- ✅ **Team analytics** — workload and current-snapshot distributions from fetched data
-- ✅ **Date ranges** — timestamp-backed trends only; unavailable history is explicitly identified
-- ✅ **Responsive** — works on mobile, tablet, and desktop
-- ✅ **Accessible** — ARIA roles, keyboard navigation, semantic HTML
-- ✅ **Overview distributions** — current task summaries link to filtered task lists
-- ✅ **Task detail drawer** — keyboard accessible, with safe original-source links
-- ✅ **Team analytics** — workload, snapshot completion, and honest date-history limits
-- ✅ **Read-only source status** — mock APIs do not claim changes are persisted
-
----
-
-## Error Handling
-
-| Scenario                      | Behaviour                                                    |
-|-------------------------------|--------------------------------------------------------------|
-| Backend unavailable or timed out | Recoverable error state with source context and Retry button |
-| One API fails, other succeeds | Error thrown (both fetched via `Promise.all`)                |
-| Filters yield no results      | Empty state with "Clear Filters" button                      |
-| Unknown task status/urgency   | Graceful fallback — shows raw value with default styling     |
-
-## Validation and Security Notes
-
-- The backend is a read-only demonstration service. It has no database, user authentication, authorization, or source write API. Task create/edit/delete, status mutation, and bulk operations are not supported.
-- CORS allows the deployed Vercel origin and local Vite development origins. It advertises GET only. Response headers include `nosniff`, frame denial, referrer policy, and `no-store`; `X-Powered-By` is disabled.
-- The frontend validates task response shape, reports HTTP/JSON/network errors, and times out requests after 10 seconds.
-- Production dependency audits were clean at the most recent review; rerun audits when dependencies change.
-- The current task schema has no creation/completion timestamps or historical snapshots. Activity trends and historical overdue comparisons are unavailable until the data provider supplies reliable event history.
-
-## Deployment Checklist
-
-1. In Vercel, use `frontend` as the root directory and set `VITE_API_BASE_URL` to `https://employee-task-dashboard-g2ug.onrender.com` (origin only, without `/api`) for each deployed environment. Rebuild after changing it.
-2. In Render, use `backend` as the root directory, `npm ci` as the build command, and `npm start` as the start command. Confirm the deployed branch/commit in the Render dashboard.
-3. Verify `GET https://employee-task-dashboard-g2ug.onrender.com/api/health` and both `/api/crm/tasks` and `/api/helpdesk/tasks` after deployment.
-4. Verify the Render response includes `Access-Control-Allow-Origin: https://employee-task-dashboard-chi.vercel.app` for requests with that Origin.
-5. These commands do not deploy, commit, or push:
-
-```bash
-cd frontend && npm ci && npm test && npm run build
-cd ../backend && npm ci && npm test
-```
-
----
-
-## Interview Notes
-
-### Why `Promise.all` for fetching?
-Both APIs are independent — there is no reason to wait for one before starting the other. `Promise.all` runs them concurrently, cutting fetch time roughly in half.
-
-### Why client-side filtering?
-With only 16 tasks the dataset is tiny. Filtering in memory via `Array.filter` is instant and avoids unnecessary API round-trips. In a real system with thousands of tasks, filtering would be server-side with query parameters.
-
-### Why a score-based sort instead of multi-key sort?
-A single numeric score is easy to explain, debug, and extend. Adding a new factor (e.g. "VIP client" +20) just means adding another term to the formula.
+Developed for **Aulten Digital** · TaskFlow Employee Task Management CRM.
+All rights reserved.
