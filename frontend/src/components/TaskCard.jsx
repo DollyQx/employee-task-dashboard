@@ -6,6 +6,7 @@ export default function TaskCard({ task, view = 'list' }) {
   const { id, title, employee, status, deadline, urgency, source, sourceUrl, daysFromToday } = task;
   const isOverdue = daysFromToday < 0 && status !== 'completed';
   const isToday = daysFromToday === 0;
+  const dueState = isOverdue ? 'overdue' : isToday ? 'today' : daysFromToday > 0 ? 'upcoming' : 'completed';
   const dueLabel = isOverdue
     ? `${Math.abs(daysFromToday)}d overdue`
     : isToday ? 'Due today' : new Date(`${deadline}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -24,7 +25,11 @@ export default function TaskCard({ task, view = 'list' }) {
       <div className="task-assignee"><span className="assignee-avatar">{initials}</span><span>{employee}</span></div>
       <div className="task-priority"><UrgencyBadge urgency={urgency} /></div>
       <div className="task-status"><StatusBadge status={status} /></div>
-      <div className={`task-due${isOverdue ? ' task-due--overdue' : ''}`}><span className="due-dot" />{dueLabel}{isOverdue && <span className="overdue-label">Overdue</span>}</div>
+      <div className={`task-due task-due--${dueState}`} title={`Due ${deadline}${isOverdue ? `, ${Math.abs(daysFromToday)} days overdue` : ''}`}>
+        <span className="due-dot" aria-hidden="true" />
+        <span>{dueLabel}</span>
+        {isOverdue && <span className="overdue-label">Overdue</span>}
+      </div>
     </article>
   );
 }
