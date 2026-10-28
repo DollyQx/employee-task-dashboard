@@ -6,9 +6,9 @@ import React from 'react';
  */
 export default function StatusBadge({ status }) {
   const labels = {
-    'completed':  '✓ Completed',
-    'in-progress':'⟳ In Progress',
-    'pending':    '○ Pending',
+    completed: 'Completed',
+    'in-progress': 'In progress',
+    pending: 'To do',
   };
 
   const label = labels[status] ?? status;

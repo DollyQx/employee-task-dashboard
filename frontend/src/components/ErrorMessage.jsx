@@ -7,7 +7,7 @@ import React from 'react';
 export default function ErrorMessage({ error, onRetry }) {
   return (
     <div className="error-container" role="alert" aria-live="assertive">
-      <div className="error-icon" aria-hidden="true">⚠️</div>
+      <div className="error-icon" aria-hidden="true">!</div>
       <h2 className="error-title">Could not load tasks</h2>
       <p className="error-message">
         The task service could not be reached. Check the API connection and try again.
@@ -21,7 +21,7 @@ export default function ErrorMessage({ error, onRetry }) {
         onClick={onRetry}
         type="button"
       >
-        ↺ Retry
+        Retry connection
       </button>
     </div>
   );
