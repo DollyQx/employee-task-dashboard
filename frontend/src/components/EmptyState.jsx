@@ -6,12 +6,12 @@ import React from 'react';
 export default function EmptyState({ hasFilters, onReset }) {
   return (
     <div className="empty-container" role="status" aria-live="polite">
-      <div className="empty-icon" aria-hidden="true">⌕</div>
+      <div className="empty-icon" aria-hidden="true">🔍</div>
       <h2 className="empty-title">
-        {hasFilters ? 'No tasks match this view' : 'No tasks to show'}
+        {hasFilters ? 'No work orders match this view' : 'No work orders to display'}
       </h2>
       <p className="empty-subtitle">
-        {hasFilters ? 'Adjust your filters or clear them to see more work.' : 'Tasks from your connected sources will appear here.'}
+        {hasFilters ? 'Adjust your floor filters or reset them to inspect all shopfloor orders.' : 'Work orders from connected plant sources will appear here.'}
       </p>
       {hasFilters && (
         <button

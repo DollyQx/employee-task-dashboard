@@ -11,7 +11,7 @@ function formatDeadline(deadline) {
   if (parsed === null) return 'Invalid due date';
   const dateStr = String(deadline).split('T')[0];
   const date = new Date(`${dateStr}T00:00:00`);
-  return date.toLocaleDateString('en-US', {
+  return date.toLocaleDateString('en-IN', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
@@ -34,7 +34,7 @@ export default function TaskDetailDrawer({
   const [submittingComment, setSubmittingComment] = useState(false);
   const [statusVal, setStatusVal] = useState(task?.crm_status || task?.status || 'todo');
 
-  const isDatabaseTask = Boolean(task?.task_code || task?.crm_status || task?.organization_id);
+  const isDatabaseTask = Boolean(task?.task_code || task?.crm_status || task?.organization_id || task?.id);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement;
@@ -75,7 +75,7 @@ export default function TaskDetailDrawer({
   }, [onClose]);
 
   useEffect(() => {
-    if (isDatabaseTask && task?.id) {
+    if (task?.id) {
       setLoadingComments(true);
       fetchTaskCommentsApi(task.id)
         .then((res) => {
@@ -84,12 +84,12 @@ export default function TaskDetailDrawer({
         .catch(() => {})
         .finally(() => setLoadingComments(false));
     }
-  }, [isDatabaseTask, task?.id]);
+  }, [task?.id]);
 
   const handleStatusChange = async (e) => {
     const nextStatus = e.target.value;
     setStatusVal(nextStatus);
-    if (isDatabaseTask && task?.id) {
+    if (task?.id) {
       try {
         const res = await patchTaskStatusApi(task.id, nextStatus);
         if (onTaskUpdated && res?.task) {
@@ -136,28 +136,28 @@ export default function TaskDetailDrawer({
         <header className="task-drawer__header">
           <div>
             <p className="task-drawer__eyebrow">
-              {task.task_code || (task.source ? `${task.source} Task` : 'Task details')}
+              {task.task_code || 'WORK ORDER'} • {task.department_name || 'Plant Operations'}
             </p>
-            <h2 id="task-drawer-title">{task.title || 'Untitled task'}</h2>
+            <h2 id="task-drawer-title">{task.title || 'Untitled Work Order'}</h2>
           </div>
           <div className="drawer-header-actions">
-            {isDatabaseTask && onEditTask && (
+            {onEditTask && (
               <button
                 type="button"
                 className="button button--secondary button--sm"
                 onClick={() => onEditTask(task)}
               >
-                ✎ Edit
+                ✏️ Edit
               </button>
             )}
-            {isDatabaseTask && onDeleteTask && (
+            {onDeleteTask && (
               <button
                 type="button"
                 className="button button--secondary button--sm text-red"
                 onClick={() => onDeleteTask(task.id)}
-                title="Delete task"
+                title="Delete work order"
               >
-                🗑
+                🗑️
               </button>
             )}
             <button
@@ -167,7 +167,7 @@ export default function TaskDetailDrawer({
               onClick={onClose}
               aria-label="Close task details"
             >
-              ×
+              ✕
             </button>
           </div>
         </header>
@@ -175,181 +175,155 @@ export default function TaskDetailDrawer({
         <div className="task-drawer__content">
           {task.description && (
             <div className="task-drawer__desc-box">
-              <h4>Description & Acceptance Criteria</h4>
+              <h4>Technical Specifications & Acceptance Criteria</h4>
               <p>{task.description}</p>
             </div>
           )}
 
           <dl className="task-detail-list">
             <div className="task-detail-row">
-              <dt>Status</dt>
+              <dt>Floor Status</dt>
               <dd>
-                {isDatabaseTask ? (
-                  <select
-                    className="drawer-status-select"
-                    value={statusVal}
-                    onChange={handleStatusChange}
-                  >
-                    <option value="backlog">Backlog</option>
-                    <option value="todo">To Do</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="in_review">In Review</option>
-                    <option value="blocked">Blocked</option>
-                    <option value="done">Done</option>
-                  </select>
-                ) : (
-                  <StatusBadge status={task.status} />
-                )}
+                <select
+                  className="drawer-status-select"
+                  value={statusVal}
+                  onChange={handleStatusChange}
+                >
+                  <option value="backlog">Backlog / Planned</option>
+                  <option value="todo">Shift Queue</option>
+                  <option value="in_progress">In Machining</option>
+                  <option value="in_review">QA & Metrology Review</option>
+                  <option value="blocked">Maintenance Hold</option>
+                  <option value="done">Completed & Dispatched</option>
+                </select>
               </dd>
             </div>
 
             <div className="task-detail-row">
-              <dt>Priority</dt>
+              <dt>Criticality / Urgency</dt>
               <dd>
-                {task.crm_priority ? (
-                  <span className={`priority-pill priority-pill--${task.crm_priority}`}>
-                    {task.crm_priority}
-                  </span>
-                ) : task.urgency ? (
-                  <UrgencyBadge urgency={task.urgency} />
-                ) : (
-                  'Medium'
-                )}
+                <span className={`priority-pill priority-pill--${task.crm_priority || task.urgency || 'medium'}`}>
+                  {(task.crm_priority || task.urgency || 'medium').toUpperCase()}
+                </span>
               </dd>
+            </div>
+
+            {task.asset && (
+              <div className="task-detail-row">
+                <dt>Machinery / Asset</dt>
+                <dd><strong>🔧 {task.asset}</strong></dd>
+              </div>
+            )}
+
+            {task.batch_no && (
+              <div className="task-detail-row">
+                <dt>Material Heat / Batch</dt>
+                <dd><code>{task.batch_no}</code></dd>
+              </div>
+            )}
+
+            <div className="task-detail-row">
+              <dt>Shopfloor Division</dt>
+              <dd>{task.department_name || 'Plant Operations & Production'}</dd>
             </div>
 
             {task.project_name && (
               <div className="task-detail-row">
-                <dt>Project</dt>
-                <dd><strong>◫ {task.project_name}</strong></dd>
-              </div>
-            )}
-
-            {task.department_name && (
-              <div className="task-detail-row">
-                <dt>Department</dt>
-                <dd>🏢 {task.department_name}</dd>
+                <dt>OEM Project</dt>
+                <dd>📁 {task.project_name}</dd>
               </div>
             )}
 
             <div className="task-detail-row">
-              <dt>Assignees</dt>
+              <dt>Lead Specialist</dt>
               <dd>
-                {task.assignees && task.assignees.length > 0 ? (
-                  <div className="drawer-assignees-list">
-                    {task.assignees.map((a, i) => (
-                      <span key={a.id || i} className="drawer-assignee-tag">
-                        <span className="mini-avatar">{a.avatar || a.full_name?.substring(0, 2).toUpperCase()}</span>
-                        <span>{a.full_name || a.email}</span>
-                      </span>
-                    ))}
-                  </div>
-                ) : task.employee?.trim() ? (
-                  <span className="drawer-assignee-tag">
-                    <span className="mini-avatar">{task.employee.trim().split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase()}</span>
-                    <span>{task.employee.trim()}</span>
-                  </span>
-                ) : (
-                  'Unassigned'
-                )}
+                <strong>{task.employee || task.assignees?.[0]?.full_name || 'Unassigned'}</strong>
               </dd>
             </div>
 
             <div className="task-detail-row">
-              <dt>Due date</dt>
-              <dd className={overdue ? 'task-detail-row__overdue' : ''}>
-                {deadlineField ? formatDeadline(deadlineField) : 'No due date'}
+              <dt>Target Completion</dt>
+              <dd>
+                <span className={overdue ? 'text-red' : ''}>
+                  {formatDeadline(deadlineField)}
+                  {overdue && daysUntilDeadline !== null && (
+                    <strong> ({Math.abs(daysUntilDeadline)} days overdue)</strong>
+                  )}
+                </span>
               </dd>
             </div>
-
-            {deadlineField && (
-              <div className="task-detail-row">
-                <dt>Timeline State</dt>
-                <dd className={overdue ? 'task-detail-row__overdue' : ''}>
-                  {overdue ? `${Math.abs(daysUntilDeadline || 1)} day(s) overdue ⚠️` : daysUntilDeadline === 0 ? 'Due today' : 'On schedule'}
-                </dd>
-              </div>
-            )}
 
             {task.estimated_hours > 0 && (
               <div className="task-detail-row">
-                <dt>Work Effort</dt>
-                <dd>{task.actual_hours || 0} / {task.estimated_hours} hrs logged ({task.completion_percentage || 0}%)</dd>
+                <dt>Standard Cycle Time</dt>
+                <dd>{task.estimated_hours} Hours</dd>
               </div>
             )}
 
             {task.tags && (
               <div className="task-detail-row">
-                <dt>Tags</dt>
+                <dt>Process Tags</dt>
+                <dd className="drawer-tags">
+                  {task.tags.split(',').map((t, idx) => (
+                    <span key={idx} className="drawer-tag">#{t.trim()}</span>
+                  ))}
+                </dd>
+              </div>
+            )}
+
+            {originalTaskUrl && (
+              <div className="task-detail-row">
+                <dt>External Work Order</dt>
                 <dd>
-                  <div className="drawer-tags-wrap">
-                    {task.tags.split(',').map((t, idx) => (
-                      <span key={idx} className="tag-chip">#{t.trim()}</span>
-                    ))}
-                  </div>
+                  <a href={originalTaskUrl} target="_blank" rel="noopener noreferrer">
+                    Open SCADA Reference ↗
+                  </a>
                 </dd>
               </div>
             )}
           </dl>
 
-          {/* Database Task Comments Thread */}
-          {isDatabaseTask && (
-            <div className="task-comments-section">
-              <h4>Activity & Discussion ({comments.length})</h4>
-              <div className="comments-stream">
-                {loadingComments ? (
-                  <p className="loading-note">Loading conversation…</p>
-                ) : comments.length === 0 ? (
-                  <p className="no-comments-note">No comments yet. Start the conversation below.</p>
-                ) : (
-                  comments.map((c) => (
-                    <div key={c.id} className="comment-bubble">
-                      <div className="comment-header">
-                        <span className="mini-avatar">{c.avatar || c.full_name?.substring(0, 2).toUpperCase() || 'U'}</span>
-                        <strong>{c.full_name || 'Team Member'}</strong>
-                        <small>{new Date(c.created_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</small>
-                      </div>
-                      <p className="comment-text">{c.comment}</p>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <form onSubmit={handleAddComment} className="comment-input-form">
-                <textarea
-                  className="form-textarea"
-                  rows="2"
-                  placeholder="Write a comment or update for the team..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  disabled={submittingComment}
-                />
-                <button
-                  type="submit"
-                  className="button button--secondary button--sm"
-                  disabled={submittingComment || !newComment.trim()}
-                >
-                  {submittingComment ? 'Posting…' : 'Post Comment'}
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Legacy External Task Information */}
-          {!isDatabaseTask && (
-            <>
-              <p className="task-drawer__readonly">
-                {task.source || 'This'} tasks are read-only mock feeds in TaskFlow.
-              </p>
-              {originalTaskUrl ? (
-                <a className="task-drawer__original-link" href={originalTaskUrl} target="_blank" rel="noopener noreferrer">
-                  Open original task <span aria-hidden="true">↗</span>
-                </a>
+          {/* Comments and Engineering Notes Section */}
+          <div className="drawer-comments-section">
+            <h4>Engineering Shift Notes & QA Comments ({comments.length})</h4>
+            <div className="comments-list">
+              {loadingComments ? (
+                <p className="subtle-note">Loading comments...</p>
+              ) : comments.length === 0 ? (
+                <p className="subtle-note">No comments logged for this work order yet.</p>
               ) : (
-                <p className="task-drawer__readonly" role="status">Original task link unavailable.</p>
+                comments.map((c) => (
+                  <div key={c.id} className="comment-item">
+                    <div className="comment-header">
+                      <span className="mini-avatar">{c.user_avatar || (c.user_name ? c.user_name.substring(0, 2).toUpperCase() : 'AS')}</span>
+                      <strong>{c.user_name || 'Floor Specialist'}</strong>
+                      <span className="comment-time">
+                        {c.created_at ? new Date(c.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p className="comment-body">{c.comment}</p>
+                  </div>
+                ))
               )}
-            </>
-          )}
+            </div>
+
+            <form onSubmit={handleAddComment} className="add-comment-form">
+              <input
+                type="text"
+                placeholder="Log shift observation or metrology update..."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                disabled={submittingComment}
+              />
+              <button
+                type="submit"
+                className="button button--primary button--sm"
+                disabled={submittingComment || !newComment.trim()}
+              >
+                {submittingComment ? 'Logging...' : 'Post Note'}
+              </button>
+            </form>
+          </div>
         </div>
       </aside>
     </div>

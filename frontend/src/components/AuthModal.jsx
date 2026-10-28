@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { loginApi, forgotPasswordApi, switchDemoUserApi } from '../api/crm';
 
 const DEMO_PRESETS = [
-  { name: 'Aarav Sharma', role: 'Super Admin', email: 'aarav.sharma@example.com', badge: 'super_admin' },
-  { name: 'Priya Verma', role: 'Admin (Engineering Dir.)', email: 'priya.verma@example.com', badge: 'admin' },
-  { name: 'Sneha Gupta', role: 'Manager (Web Lead)', email: 'sneha.gupta@example.com', badge: 'manager' },
-  { name: 'Rahul Kumar', role: 'Employee (Senior Dev)', email: 'rahul.kumar@example.com', badge: 'employee' },
+  { name: 'Aarav Sharma', role: 'Plant Operations VP (Super Admin)', email: 'aarav.sharma@example.com', badge: 'super_admin' },
+  { name: 'Priya Verma', role: 'QA & Metrology Head (Admin)', email: 'priya.verma@example.com', badge: 'admin' },
+  { name: 'Rajesh Kumar', role: 'General Manager - Production (Manager)', email: 'rajesh.kumar@example.com', badge: 'manager' },
+  { name: 'Vikram Malhotra', role: 'Lead CNC Tooling Engineer (Manager)', email: 'vikram.malhotra@example.com', badge: 'manager' },
+  { name: 'Sneha Gupta', role: 'Metallurgy Lab Lead (Manager)', email: 'sneha.gupta@example.com', badge: 'manager' },
+  { name: 'Rahul Kumar', role: 'Senior CNC Mill Machinist (Employee)', email: 'rahul.kumar@example.com', badge: 'employee' },
 ];
 
 export default function AuthModal({
@@ -14,7 +16,7 @@ export default function AuthModal({
   onLoginSuccess,
   demoUsers = [],
 }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'forgot' | 'demo'
+  const [mode, setMode] = useState('demo'); // 'demo' | 'login' | 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('TaskFlowDemo@2026!');
   const [error, setError] = useState('');
@@ -43,7 +45,7 @@ export default function AuthModal({
     setError('');
     setLoading(true);
     try {
-      const found = demoUsers.find((u) => u.email === demoUser.email);
+      const found = demoUsers.find((u) => u.email.toLowerCase() === demoUser.email.toLowerCase());
       if (found) {
         const data = await switchDemoUserApi(found.id);
         onLoginSuccess(data.user);
@@ -74,7 +76,7 @@ export default function AuthModal({
     setLoading(true);
     try {
       const data = await forgotPasswordApi(email.trim());
-      setSuccessMsg(data.message || 'Password reset link sent to your email.');
+      setSuccessMsg(data.message || 'Password reset link sent to your work email.');
     } catch (err) {
       setError(err.message || 'Failed to request password reset.');
     } finally {
@@ -89,11 +91,13 @@ export default function AuthModal({
           <div className="auth-brand">
             <span className="brand-mark"><i /><i /><i /><i /></span>
             <div>
-              <h3>Aulten Digital · TaskFlow</h3>
-              <p>Enterprise Employee CRM Authentication</p>
+              <h3>Bharat Precision Dynamics</h3>
+              <p>Industrial Plant OS & Work Order Authentication</p>
             </div>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close dialog">✕</button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close dialog">
+            ✕
+          </button>
         </div>
 
         <div className="auth-tabs">
@@ -102,7 +106,7 @@ export default function AuthModal({
             className={`tab-btn${mode === 'demo' ? ' is-active' : ''}`}
             onClick={() => setMode('demo')}
           >
-            ⚡ Quick Demo Roles
+            ⚡ Quick Shift Personas
           </button>
           <button
             type="button"
@@ -127,7 +131,7 @@ export default function AuthModal({
           {mode === 'demo' ? (
             <div className="demo-personas-grid">
               <p className="auth-helper-text">
-                Select a test persona below to instantly experience TaskFlow with that exact role’s server-enforced permissions and UI:
+                Select an Indian manufacturing specialist below to experience the platform with their exact floor permissions, department scope, and assigned work orders:
               </p>
               <div className="presets-list">
                 {DEMO_PRESETS.map((preset) => (
@@ -156,7 +160,7 @@ export default function AuthModal({
           ) : mode === 'login' ? (
             <form onSubmit={handleLogin} className="auth-form">
               <div className="form-group">
-                <label htmlFor="login-email">Work Email</label>
+                <label htmlFor="login-email">Registered Plant Email</label>
                 <input
                   id="login-email"
                   type="email"
@@ -192,16 +196,16 @@ export default function AuthModal({
               </div>
 
               <button type="submit" className="button button--primary button--full" disabled={loading}>
-                {loading ? 'Authenticating…' : 'Sign In to TaskFlow'}
+                {loading ? 'Authenticating...' : 'Sign In to Plant OS'}
               </button>
             </form>
           ) : (
             <form onSubmit={handleForgotPassword} className="auth-form">
               <p className="auth-helper-text">
-                Enter your registered work email to receive password reset instructions:
+                Enter your registered plant email to receive password reset instructions:
               </p>
               <div className="form-group">
-                <label htmlFor="reset-email">Work Email</label>
+                <label htmlFor="reset-email">Plant Email</label>
                 <input
                   id="reset-email"
                   type="email"
@@ -213,7 +217,7 @@ export default function AuthModal({
                 />
               </div>
               <button type="submit" className="button button--primary button--full" disabled={loading}>
-                {loading ? 'Submitting…' : 'Send Reset Instructions'}
+                {loading ? 'Submitting...' : 'Send Reset Instructions'}
               </button>
             </form>
           )}
@@ -221,7 +225,7 @@ export default function AuthModal({
 
         <div className="modal-footer auth-footer">
           <small className="security-notice">
-            🛡️ Protected with Scrypt password hashing, HttpOnly session cookies, and organization-scoped tenant isolation.
+            🔒 Protected with memory-hard Scrypt hashing, HttpOnly session cookies, and multi-tenant isolation.
           </small>
         </div>
       </div>

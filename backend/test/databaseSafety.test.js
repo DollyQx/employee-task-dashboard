@@ -50,12 +50,14 @@ describe('Database Safety Guard Unit Tests', () => {
     const unsafeUrls = [
       'postgresql://owner:pass@ep-snowy-dream-09523508-production.us-east-2.aws.neon.tech/neondb?sslmode=require',
       'postgresql://owner:pass@ep-snowy-dream-09523508.us-east-2.aws.neon.tech/neondb?sslmode=require',
+      'postgresql://owner:pass@ep-icy-morning-b59bgelp.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require',
+      'postgresql://owner:pass@ep-icy-morning-b59bgelp-pooler.c-7.us-east-2.aws.neon.tech/neondb?sslmode=require',
     ];
 
     for (const url of unsafeUrls) {
       assert.throws(
         () => assertSafeStagingDatabase(url, undefined),
-        /targets the production branch/,
+        /targets the production (branch|endpoint)/,
         `Should have rejected ${url}`
       );
     }

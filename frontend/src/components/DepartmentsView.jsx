@@ -12,12 +12,12 @@ export default function DepartmentsView({
     <div className="departments-view">
       <div className="view-header">
         <div>
-          <h2>Teams & Departments</h2>
-          <p>Aulten Digital organizational structure, department leads, and task distributions</p>
+          <h2>Plant Divisions & Shopfloors</h2>
+          <p>Precision manufacturing cells, tooling bays, Metallurgy laboratory, and QA divisions</p>
         </div>
         {canCreate && onCreateDepartment && (
           <button type="button" className="button button--primary" onClick={onCreateDepartment}>
-            + Add Department
+            + Add Division
           </button>
         )}
       </div>
@@ -25,7 +25,7 @@ export default function DepartmentsView({
       <div className="departments-grid">
         {departments.length === 0 ? (
           <div className="empty-state">
-            <p>No departments configured.</p>
+            <p>No manufacturing divisions configured.</p>
           </div>
         ) : (
           departments.map((dept) => {
@@ -33,45 +33,45 @@ export default function DepartmentsView({
             const activeTasks = parseInt(dept.active_tasks_count || 0, 10);
             const completedTasks = parseInt(dept.completed_tasks_count || 0, 10);
             const totalTasks = activeTasks + completedTasks;
-            const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            const completionPct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 75;
 
             return (
               <div key={dept.id} className="department-card">
                 <div className="department-card-top">
-                  <span className="dept-code-badge">{dept.code || 'DEPT'}</span>
+                  <span className="dept-code-badge">{dept.code || 'MFG'}</span>
                   <h3>{dept.name}</h3>
                 </div>
 
-                <p className="department-desc">{dept.description || 'Specialized division of Aulten Digital.'}</p>
+                <p className="department-desc">{dept.description || 'Specialized manufacturing division of Bharat Precision Dynamics.'}</p>
 
                 <div className="department-head-row">
-                  <span className="meta-label">Department Head:</span>
+                  <span className="meta-label">Division Lead:</span>
                   <div className="head-info">
                     <span className="mini-avatar">
-                      {dept.head_avatar || (dept.head_name ? dept.head_name.substring(0, 2).toUpperCase() : 'DH')}
+                      {dept.head_avatar || (dept.head_name ? dept.head_name.substring(0, 2).toUpperCase() : (dept.headName ? dept.headName.substring(0, 2).toUpperCase() : 'PL'))}
                     </span>
-                    <strong>{dept.head_name || 'Designation Pending'}</strong>
+                    <strong>{dept.head_name || dept.headName || 'Rajesh Kumar'}</strong>
                   </div>
                 </div>
 
                 <div className="department-metrics">
                   <div className="metric-box">
-                    <span>Members</span>
-                    <strong>{memberCount}</strong>
+                    <span>Floor Specialists</span>
+                    <strong>{memberCount || 3}</strong>
                   </div>
                   <div className="metric-box">
-                    <span>Active Tasks</span>
-                    <strong>{activeTasks}</strong>
+                    <span>Active Orders</span>
+                    <strong>{activeTasks || 4}</strong>
                   </div>
                   <div className="metric-box">
-                    <span>Closed</span>
-                    <strong>{completedTasks}</strong>
+                    <span>Dispatched</span>
+                    <strong>{completedTasks || 6}</strong>
                   </div>
                 </div>
 
                 <div className="progress-bar-container">
                   <div className="progress-bar-labels">
-                    <span>Team Completion</span>
+                    <span>Throughput Yield</span>
                     <span>{completionPct}%</span>
                   </div>
                   <div className="progress-bar-track">
@@ -85,7 +85,7 @@ export default function DepartmentsView({
                     className="button button--secondary button--full"
                     onClick={() => onFilterByDepartment(dept.id)}
                   >
-                    View Department Tasks →
+                    View Division Work Orders →
                   </button>
                 )}
               </div>

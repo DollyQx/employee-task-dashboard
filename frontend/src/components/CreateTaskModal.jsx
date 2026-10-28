@@ -30,7 +30,7 @@ export default function CreateTaskModal({
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) {
-      setError('Task title is required.');
+      setError('Work order title is required.');
       return;
     }
 
@@ -52,7 +52,7 @@ export default function CreateTaskModal({
       });
       onClose();
     } catch (err) {
-      setError(err.message || 'Failed to save task.');
+      setError(err.message || 'Failed to save work order.');
     } finally {
       setSubmitting(false);
     }
@@ -69,10 +69,12 @@ export default function CreateTaskModal({
       <div className="modal-dialog modal-dialog--wide" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div>
-            <h3>{initialData ? 'Edit Task' : 'Create New Task'}</h3>
-            <p>Aulten Digital TaskFlow CRM</p>
+            <h3>{initialData ? 'Edit Work Order' : 'Schedule Plant Work Order'}</h3>
+            <p>Bharat Precision Dynamics • Shopfloor Management</p>
           </div>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close dialog">✕</button>
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close dialog">
+            ✕
+          </button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -80,12 +82,12 @@ export default function CreateTaskModal({
             {error && <div className="form-error-banner">{error}</div>}
 
             <div className="form-group">
-              <label htmlFor="task-title">Task Title *</label>
+              <label htmlFor="task-title">Work Order Title *</label>
               <input
                 id="task-title"
                 type="text"
                 className="form-input"
-                placeholder="e.g. Optimize PostgreSQL database queries"
+                placeholder="e.g. Calibrate 5-Axis CNC Milling Unit #4 (Metrology Tolerance < 0.005mm)"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 required
@@ -95,84 +97,73 @@ export default function CreateTaskModal({
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="task-status">Status</label>
+                <label htmlFor="task-status">Floor Status</label>
                 <select
                   id="task-status"
-                  className="form-select"
+                  className="form-input"
                   value={crmStatus}
                   onChange={(e) => setCrmStatus(e.target.value)}
                 >
-                  <option value="backlog">Backlog</option>
-                  <option value="todo">To Do</option>
-                  <option value="in_progress">In Progress</option>
-                  <option value="in_review">In Review</option>
-                  <option value="blocked">Blocked</option>
-                  <option value="done">Done</option>
+                  <option value="backlog">Backlog / Planned</option>
+                  <option value="todo">Shift Queue</option>
+                  <option value="in_progress">In Machining</option>
+                  <option value="in_review">QA & Metrology Review</option>
+                  <option value="blocked">Maintenance Hold</option>
+                  <option value="done">Completed & Dispatched</option>
                 </select>
               </div>
 
               <div className="form-group">
-                <label htmlFor="task-priority">Priority</label>
+                <label htmlFor="task-priority">Criticality Level</label>
                 <select
                   id="task-priority"
-                  className="form-select"
+                  className="form-input"
                   value={crmPriority}
                   onChange={(e) => setCrmPriority(e.target.value)}
                 >
-                  <option value="low">Low</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">High</option>
-                  <option value="urgent">Urgent</option>
+                  <option value="urgent">🔴 Urgent / Safety Critical</option>
+                  <option value="high">🟠 High Priority</option>
+                  <option value="medium">🟡 Standard Shift</option>
+                  <option value="low">🟢 Low / Preventive Routine</option>
                 </select>
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="task-project">Project</label>
+                <label htmlFor="task-dept">Manufacturing Division</label>
+                <select
+                  id="task-dept"
+                  className="form-input"
+                  value={departmentId}
+                  onChange={(e) => setDepartmentId(e.target.value)}
+                >
+                  <option value="">Select Division...</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="task-project">OEM Project</label>
                 <select
                   id="task-project"
-                  className="form-select"
+                  className="form-input"
                   value={projectId}
                   onChange={(e) => setProjectId(e.target.value)}
                 >
-                  <option value="">No Project (General)</option>
+                  <option value="">Select Project...</option>
                   {projects.map((p) => (
                     <option key={p.id} value={p.id}>{p.name}</option>
                   ))}
                 </select>
               </div>
-
-              <div className="form-group">
-                <label htmlFor="task-department">Department</label>
-                <select
-                  id="task-department"
-                  className="form-select"
-                  value={departmentId}
-                  onChange={(e) => setDepartmentId(e.target.value)}
-                >
-                  <option value="">General Department</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label htmlFor="task-start">Start Date</label>
-                <input
-                  id="task-start"
-                  type="date"
-                  className="form-input"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="task-due">Due Date</label>
+                <label htmlFor="task-due">Target Completion Date</label>
                 <input
                   id="task-due"
                   type="date"
@@ -183,14 +174,14 @@ export default function CreateTaskModal({
               </div>
 
               <div className="form-group">
-                <label htmlFor="task-est">Estimated Hours</label>
+                <label htmlFor="task-hours">Standard Cycle Time (Hours)</label>
                 <input
-                  id="task-est"
+                  id="task-hours"
                   type="number"
                   min="0"
                   step="0.5"
                   className="form-input"
-                  placeholder="e.g. 8"
+                  placeholder="e.g. 6.5"
                   value={estimatedHours}
                   onChange={(e) => setEstimatedHours(e.target.value)}
                 />
@@ -198,48 +189,47 @@ export default function CreateTaskModal({
             </div>
 
             <div className="form-group">
-              <label htmlFor="task-desc">Description</label>
+              <label htmlFor="task-tags">Process Tags (comma separated)</label>
+              <input
+                id="task-tags"
+                type="text"
+                className="form-input"
+                placeholder="e.g. CNC, Metrology, Tolerance, Defense"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="task-desc">Technical Specifications & Floor Acceptance Notes</label>
               <textarea
                 id="task-desc"
-                className="form-textarea"
+                className="form-input form-textarea"
                 rows="3"
-                placeholder="Detailed task specifications and acceptance criteria..."
+                placeholder="Specify tolerances, machine assets, tooling codes, or safety precautions..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
               />
             </div>
 
             <div className="form-group">
-              <label>Assign Team Members</label>
+              <label>Assign Indian Plant Specialists</label>
               <div className="assignees-picker">
                 {employees.map((emp) => {
-                  const isChecked = selectedAssignees.includes(emp.id);
+                  const isSelected = selectedAssignees.includes(emp.id);
                   return (
                     <button
                       key={emp.id}
                       type="button"
-                      className={`assignee-pill${isChecked ? ' is-selected' : ''}`}
+                      className={`assignee-chip${isSelected ? ' is-selected' : ''}`}
                       onClick={() => toggleAssignee(emp.id)}
                     >
                       <span className="mini-avatar">{emp.avatar || emp.full_name?.substring(0, 2).toUpperCase()}</span>
                       <span>{emp.full_name}</span>
-                      {isChecked && <span className="check-mark">✓</span>}
                     </button>
                   );
                 })}
               </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="task-tags">Tags (comma separated)</label>
-              <input
-                id="task-tags"
-                type="text"
-                className="form-input"
-                placeholder="e.g. database, security, api"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-              />
             </div>
           </div>
 
@@ -248,7 +238,7 @@ export default function CreateTaskModal({
               Cancel
             </button>
             <button type="submit" className="button button--primary" disabled={submitting}>
-              {submitting ? 'Saving…' : initialData ? 'Update Task' : 'Create Task'}
+              {submitting ? 'Saving...' : (initialData ? 'Save Changes' : 'Issue Work Order')}
             </button>
           </div>
         </form>

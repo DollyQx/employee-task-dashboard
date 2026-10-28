@@ -18,8 +18,8 @@ export default function NotificationsView({
     <div className="notifications-view">
       <div className="view-header">
         <div>
-          <h2>Notification Center</h2>
-          <p>Task assignments, mentions, status updates, and system alerts</p>
+          <h2>Plant Dispatch & Shift Alerts</h2>
+          <p>Machinery telemetry alarms, metrology sign-offs, and critical safety notifications</p>
         </div>
         {unreadCount > 0 && onMarkAllRead && (
           <button type="button" className="button button--secondary" onClick={onMarkAllRead}>
@@ -34,7 +34,7 @@ export default function NotificationsView({
           className={`tab-btn${filter === 'all' ? ' is-active' : ''}`}
           onClick={() => setFilter('all')}
         >
-          All ({notifications.length})
+          All Alerts ({notifications.length})
         </button>
         <button
           type="button"
@@ -48,15 +48,16 @@ export default function NotificationsView({
       <div className="notifications-list">
         {filtered.length === 0 ? (
           <div className="empty-state">
-            <p>You’re all caught up! No notifications to display.</p>
+            <p>You're all caught up! No active alarms or unread alerts.</p>
           </div>
         ) : (
           filtered.map((notif) => {
             const isUnread = !notif.is_read;
-            const typeIcon = notif.type === 'assignment' ? '📌' :
-                             notif.type === 'mention' ? '💬' :
-                             notif.type === 'due_date' ? '⏰' :
-                             notif.type === 'status_change' ? '🔄' : '🔔';
+            const typeIcon =
+              notif.type === 'urgent' ? '🚨' :
+              notif.type === 'warning' ? '⚠️' :
+              notif.type === 'success' ? '✅' :
+              notif.type === 'assignment' ? '📋' : '🔔';
 
             return (
               <div
@@ -72,7 +73,7 @@ export default function NotificationsView({
                   <div className="notif-top">
                     <h4>{notif.title}</h4>
                     <span className="notif-date">
-                      {new Date(notif.created_at).toLocaleDateString(undefined, {
+                      {new Date(notif.created_at).toLocaleDateString('en-IN', {
                         month: 'short',
                         day: 'numeric',
                         hour: '2-digit',

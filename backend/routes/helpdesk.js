@@ -2,21 +2,16 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * MOCK HELPDESK INTEGRATION
- * ⚠️  This is NOT a real Helpdesk system. Data is hardcoded for demonstration purposes.
- *
- * In a real integration this route would:
- *   - Authenticate with the Helpdesk API (e.g. Zendesk, Freshdesk)
- *   - Fetch open tickets assigned to employees
- *   - Normalise the response into the common task schema
+ * MOCK HELPDESK / PLANT MAINTENANCE DISPATCH
+ * Factory equipment maintenance, calibration requests, and safety tickets.
  */
 
 // Dates relative to 2026-10-28 (today)
 const HELPDESK_TASKS = [
   {
     id: 'hd-001',
-    title: 'Critical: Production server down for Client A',
-    employee: 'David Kim',
+    title: 'Critical: Hydraulic pressure drop on 1200T Stamping Press #2',
+    employee: 'Suresh Nair',
     status: 'in-progress',
     deadline: '2026-10-27', // overdue by 1 day
     urgency: 'high',
@@ -25,8 +20,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-002',
-    title: 'Resolve login failure for VIP user @ceo_acme',
-    employee: 'Sarah Johnson',
+    title: 'Recalibrate digital optical pyrometer on Induction Furnace Bay 1',
+    employee: 'Sneha Gupta',
     status: 'pending',
     deadline: '2026-10-28', // due today
     urgency: 'high',
@@ -35,8 +30,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-003',
-    title: 'Investigate slow response times on reporting module',
-    employee: 'David Kim',
+    title: 'Investigate spindle vibration harmonic spike on 5-Axis Mill #4',
+    employee: 'Rahul Kumar',
     status: 'in-progress',
     deadline: '2026-10-31',
     urgency: 'medium',
@@ -45,8 +40,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-004',
-    title: 'Update SSL certificate before expiry',
-    employee: 'Priya Patel',
+    title: 'Replace depleted argon/CO2 shielding gas manifold in Welding Cell 3',
+    employee: 'Amit Patel',
     status: 'pending',
     deadline: '2026-10-29', // due tomorrow
     urgency: 'high',
@@ -55,8 +50,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-005',
-    title: 'Reset MFA tokens for finance department',
-    employee: 'Marcus Chen',
+    title: 'Annual metrology recalibration for 250kN Zwick Tensile Tester',
+    employee: 'Deepak Chauhan',
     status: 'completed',
     deadline: '2026-10-26',
     urgency: 'medium',
@@ -65,8 +60,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-006',
-    title: 'Configure email routing for new department',
-    employee: 'James Miller',
+    title: 'Reset SCADA edge gateway IP routing on Stamping Line 4',
+    employee: 'Arjun Singh',
     status: 'pending',
     deadline: '2026-11-04',
     urgency: 'low',
@@ -75,8 +70,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-007',
-    title: 'Escalate: Data export bug blocking month-end close',
-    employee: 'David Kim',
+    title: 'Emergency: Laser curtain interlock fault on Automated Blanking Cell',
+    employee: 'Pooja Mehta',
     status: 'pending',
     deadline: '2026-10-24', // 4 days overdue
     urgency: 'high',
@@ -85,8 +80,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-008',
-    title: 'Asset inventory audit for remote employees',
-    employee: 'Sarah Johnson',
+    title: 'Quarterly shopfloor PPE and air-fed respirator mask audit',
+    employee: 'Pooja Mehta',
     status: 'pending',
     deadline: '2026-11-15',
     urgency: 'low',
@@ -97,14 +92,13 @@ const HELPDESK_TASKS = [
 
 // GET /api/helpdesk/tasks
 router.get('/tasks', (req, res) => {
-  // Simulate a small network delay
   setTimeout(() => {
     res.json({
       source: 'Helpdesk (Mock)',
       count: HELPDESK_TASKS.length,
       tasks: HELPDESK_TASKS,
     });
-  }, 400);
+  }, 200);
 });
 
 module.exports = router;

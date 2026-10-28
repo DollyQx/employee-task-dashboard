@@ -73,7 +73,13 @@ function assertSafeStagingDatabase(testDbUrl, prodDbUrl = process.env.DATABASE_U
   const lowerHost = testDetails.host;
   const lowerDb = testDetails.database;
 
-  // Specific check for snowy-dream-09523508 production branch
+  // Specific check for snowy-dream-09523508 production branch and endpoint
+  if (lowerUrl.includes('ep-icy-morning-b59bgelp')) {
+    throw new Error(
+      'SAFETY ABORT: TEST_DATABASE_URL targets the production endpoint (ep-icy-morning-b59bgelp) of project snowy-dream-09523508.'
+    );
+  }
+
   const isSnowyDreamProject = lowerUrl.includes('snowy-dream-09523508');
   if (isSnowyDreamProject) {
     const isExplicitStagingOrTest =

@@ -478,9 +478,50 @@ button:disabled { opacity: .55; cursor: wait !important; }
 [data-theme="light"] .task-card,
 [data-theme="light"] .kpi-card,
 [data-theme="light"] .analytics-panel,
-[data-theme="light"] .settings-section {
+[data-theme="light"] .settings-section,
+[data-theme="light"] .task-list-wrap,
+[data-theme="light"] .board-column,
+[data-theme="light"] .task-row--board,
+[data-theme="light"] .view-toggle,
+[data-theme="light"] .kanban-column,
+[data-theme="light"] .kanban-card,
+[data-theme="light"] .calendar-container,
+[data-theme="light"] .calendar-cell,
+[data-theme="light"] .employee-card,
+[data-theme="light"] .department-card,
+[data-theme="light"] .project-card,
+[data-theme="light"] .client-card,
+[data-theme="light"] .notification-card,
+[data-theme="light"] .modal-dialog {
   background: #ffffff;
   border-color: var(--border);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .task-list-head,
+[data-theme="light"] .calendar-day-header,
+[data-theme="light"] .enterprise-table th,
+[data-theme="light"] .modal-footer {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .task-row:hover,
+[data-theme="light"] .kanban-card:hover,
+[data-theme="light"] .calendar-cell:hover,
+[data-theme="light"] .employee-card:hover,
+[data-theme="light"] .department-card:hover,
+[data-theme="light"] .project-card:hover,
+[data-theme="light"] .client-card:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+[data-theme="light"] .task-title,
+[data-theme="light"] .kanban-card-title,
+[data-theme="light"] .welcome-row h1,
+[data-theme="light"] .section-heading h2,
+[data-theme="light"] .view-header h2 {
+  color: #0f172a;
 }
 
 [data-theme="light"] .global-search input,
@@ -1467,4 +1508,146 @@ button:disabled { opacity: .55; cursor: wait !important; }
   position: absolute;
   top: 14px;
   right: 14px;
+}
+
+/* ─── Plant Telemetry, Asset Badges & Work Order Tags ───────────────────────── */
+.plant-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(90, 201, 154, 0.08);
+  border: 1px solid rgba(90, 201, 154, 0.25);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #72dfb0;
+  white-space: nowrap;
+}
+[data-theme="light"] .plant-status-pill {
+  background: rgba(90, 201, 154, 0.12);
+  border-color: rgba(90, 201, 154, 0.4);
+  color: #1e7e54;
+}
+.plant-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px rgba(90, 201, 154, 0.7);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.task-meta-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.task-id-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(141, 130, 255, 0.14);
+  color: #b5aaff;
+  border: 1px solid rgba(141, 130, 255, 0.28);
+}
+[data-theme="light"] .task-id-badge {
+  background: rgba(141, 130, 255, 0.12);
+  color: #5c4ee5;
+  border-color: rgba(141, 130, 255, 0.3);
+}
+.task-asset-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(112, 167, 255, 0.1);
+  color: #8bbaff;
+  border: 1px solid rgba(112, 167, 255, 0.22);
+  font-size: 10px;
+  font-weight: 500;
+}
+[data-theme="light"] .task-asset-tag {
+  background: rgba(112, 167, 255, 0.12);
+  color: #1e5bb8;
+  border-color: rgba(112, 167, 255, 0.3);
+}
+.task-dept-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--muted);
+  border: 1px solid var(--border-soft);
+  font-size: 10px;
+}
+.kanban-card-asset {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #79abff;
+  background: rgba(112, 167, 255, 0.08);
+  border: 1px solid rgba(112, 167, 255, 0.18);
+  border-radius: 4px;
+  padding: 3px 6px;
+  margin-bottom: 8px;
+}
+[data-theme="light"] .kanban-card-asset {
+  background: rgba(112, 167, 255, 0.1);
+  color: #1a56b0;
+  border-color: rgba(112, 167, 255, 0.25);
+}
+
+/* ─── Calendar Day Modal & Drill-down ───────────────────────────────────────── */
+.day-tasks-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.day-task-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.12s;
+}
+.day-task-row:hover {
+  background: var(--surface-hover);
+  border-color: var(--violet);
+  transform: translateX(2px);
+}
+.day-task-row > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.day-task-row strong {
+  font-size: 12px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.day-task-row small {
+  font-size: 11px;
+  color: var(--muted);
 }

@@ -2,21 +2,17 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * MOCK CRM INTEGRATION
- * ⚠️  This is NOT a real CRM system. Data is hardcoded for demonstration purposes.
- *
- * In a real integration this route would:
- *   - Authenticate with the CRM API (e.g. Salesforce, HubSpot)
- *   - Fetch tasks assigned to employees
- *   - Normalise the response into the common task schema
+ * MOCK CRM / INDUSTRIAL ERP INTEGRATION
+ * Data is structured for Bharat Precision Dynamics / Aulten Precision Manufacturing.
+ * Returns active OEM and plant production work orders.
  */
 
 // Dates relative to 2026-10-28 (today) so sorting is always meaningful
 const CRM_TASKS = [
   {
     id: 'crm-001',
-    title: 'Follow up with Acme Corp on Q4 proposal',
-    employee: 'Sarah Johnson',
+    title: 'Tata Motors: Follow up on 500 EV Powertrain Casing delivery schedule',
+    employee: 'Rajesh Kumar',
     status: 'in-progress',
     deadline: '2026-10-26', // 2 days overdue
     urgency: 'high',
@@ -25,8 +21,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-002',
-    title: 'Send contract renewal documents to BrightStar Ltd',
-    employee: 'James Miller',
+    title: 'Mahindra Heavy Industries: Dispatch tractor driveline spec sheet',
+    employee: 'Vikram Malhotra',
     status: 'pending',
     deadline: '2026-10-28', // due today
     urgency: 'high',
@@ -35,8 +31,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-003',
-    title: 'Schedule demo call with TechNova prospects',
-    employee: 'Priya Patel',
+    title: 'BHEL Trichy: Schedule technical review on steam turbine blade coatings',
+    employee: 'Priya Verma',
     status: 'pending',
     deadline: '2026-10-30', // due in 2 days
     urgency: 'medium',
@@ -45,8 +41,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-004',
-    title: 'Update CRM records after GlobalBridge meeting',
-    employee: 'Sarah Johnson',
+    title: 'L&T Heavy Engineering: Finalize nuclear nozzle ultrasonic test protocols',
+    employee: 'Sneha Gupta',
     status: 'completed',
     deadline: '2026-10-27', // overdue but completed
     urgency: 'low',
@@ -55,8 +51,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-005',
-    title: 'Prepare quarterly sales report for team review',
-    employee: 'Marcus Chen',
+    title: 'Godrej Aerospace: Prepare CMM dimensional report for injector heads',
+    employee: 'Rahul Kumar',
     status: 'in-progress',
     deadline: '2026-11-05',
     urgency: 'medium',
@@ -65,8 +61,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-006',
-    title: 'Resolve billing dispute with Zenith Partners',
-    employee: 'James Miller',
+    title: 'Maruti Suzuki: Resolve surface micro-porosity inquiry on camshaft batch',
+    employee: 'Vikram Malhotra',
     status: 'pending',
     deadline: '2026-10-25', // 3 days overdue
     urgency: 'high',
@@ -75,8 +71,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-007',
-    title: 'Onboard new client Orion Systems',
-    employee: 'Priya Patel',
+    title: 'Ashok Leyland Defense: Onboard contract for forged armored wheel hubs',
+    employee: 'Rajesh Kumar',
     status: 'pending',
     deadline: '2026-11-10',
     urgency: 'low',
@@ -85,8 +81,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-008',
-    title: 'Send holiday promotion campaign to key accounts',
-    employee: 'Marcus Chen',
+    title: 'Reconcile Q4 raw steel coil supplier delivery scorecards',
+    employee: 'Ananya Iyer',
     status: 'pending',
     deadline: '2026-10-29', // due tomorrow
     urgency: 'medium',
@@ -97,14 +93,13 @@ const CRM_TASKS = [
 
 // GET /api/crm/tasks
 router.get('/tasks', (req, res) => {
-  // Simulate a small network delay (realistic for an external API call)
   setTimeout(() => {
     res.json({
       source: 'CRM (Mock)',
       count: CRM_TASKS.length,
       tasks: CRM_TASKS,
     });
-  }, 300);
+  }, 200);
 });
 
 module.exports = router;

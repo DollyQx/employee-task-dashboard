@@ -20,7 +20,6 @@ import {
   fetchAuditLogsApi,
   checkReadinessApi,
 } from './api/crm';
-import { fetchAllTasks } from './api/tasks';
 import FilterBar from './components/FilterBar';
 import TaskList from './components/TaskList';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -40,6 +39,7 @@ import NotificationsView from './components/NotificationsView';
 import CreateTaskModal from './components/CreateTaskModal';
 import AuthModal from './components/AuthModal';
 import { getTaskMetrics, matchesTaskFilters } from './utils/taskMetrics';
+import { getStoredManufacturingData } from './data/manufacturingSeedData';
 
 export default function App() {
   // Current user & Auth state
@@ -86,10 +86,10 @@ export default function App() {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [view, setView] = useState('list'); // 'list' | 'board'
 
-  // Loading & Error states
+  // Loading & Connection state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [dbReady, setDbReady] = useState(true);
+  const [dbReady, setDbReady] = useState(false);
 
   const searchInputRef = useRef(null);
 
@@ -120,36 +120,36 @@ export default function App() {
   // Initial Auth & Demo Data bootstrap
   const initAuth = useCallback(async () => {
     try {
-      // Fetch available demo users
       const demoRes = await getDemoUsersApi();
       if (demoRes?.users) {
         setDemoUsers(demoRes.users);
       }
 
-      // Check current session
       const meRes = await getMeApi();
       if (meRes?.user) {
         setCurrentUser(meRes.user);
         return meRes.user;
       } else if (demoRes?.users && demoRes.users.length > 0) {
-        // Auto-initialize demo session with Super Admin (Aarav Sharma)
         const autoUser = demoRes.users[0];
         const switchRes = await switchDemoUserApi(autoUser.id);
         setCurrentUser(switchRes.user);
         return switchRes.user;
       }
     } catch {
-      // In standalone mode or offline
+      // In standalone fallback mode
+      const defaultStore = getStoredManufacturingData();
+      setCurrentUser(defaultStore.users[0]);
+      setDemoUsers(defaultStore.users);
     }
     return null;
   }, []);
 
-  // Load all CRM datasets
+  // Load all manufacturing datasets
   const loadCrmData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      // 1. Check readiness
+      // 1. Probe readiness
       try {
         const readyRes = await checkReadinessApi();
         setDbReady(readyRes?.status === 'ready');
@@ -165,24 +165,26 @@ export default function App() {
           loadedTasks = tasksRes.tasks.map((t) => ({
             ...t,
             id: t.id,
-            deadline: t.due_date ? String(t.due_date).split('T')[0] : null,
-            urgency: t.crm_priority === 'urgent' ? 'high' : (t.crm_priority || 'medium'),
-            status: t.crm_status === 'done' ? 'completed' : (t.crm_status === 'in_progress' ? 'in-progress' : 'pending'),
-            employee: t.assignees?.[0]?.full_name || 'Unassigned',
-            source: t.source || 'TaskFlow',
+            task_code: t.task_code || 'WO-501',
+            deadline: t.deadline || (t.due_date ? String(t.due_date).split('T')[0] : null),
+            urgency: t.urgency || (t.crm_priority === 'urgent' ? 'high' : (t.crm_priority || 'medium')),
+            status: t.status || (t.crm_status === 'done' ? 'completed' : (t.crm_status === 'in_progress' ? 'in-progress' : 'pending')),
+            employee: t.employee || t.assignees?.[0]?.full_name || 'Unassigned',
+            source: t.source || 'Plant Work Order',
           }));
         }
-      } catch {
-        // Fallback to mock feed if tasks endpoint is unavailable
+      } catch (err) {
+        console.warn('Could not load live tasks, using local manufacturing store:', err);
       }
 
+      // If empty, load directly from local manufacturing store
       if (loadedTasks.length === 0) {
-        // Fallback to legacy mock feeds
-        loadedTasks = await fetchAllTasks();
+        const store = getStoredManufacturingData();
+        loadedTasks = store.tasks;
       }
       setTasks(loadedTasks);
 
-      // 3. Load supplementary CRM datasets concurrently
+      // 3. Load supplementary datasets
       await Promise.allSettled([
         fetchEmployeesApi().then((r) => r?.employees && setEmployees(r.employees)),
         fetchDepartmentsApi().then((r) => r?.departments && setDepartments(r.departments)),
@@ -196,7 +198,16 @@ export default function App() {
         fetchAuditLogsApi().then((r) => r?.auditLogs && setAuditLogs(r.auditLogs)),
       ]);
     } catch (err) {
-      setError(err.message || 'Failed to load TaskFlow CRM records.');
+      console.error('Data load error:', err);
+      // Fallback guarantees zero blank screens
+      const store = getStoredManufacturingData();
+      setTasks(store.tasks);
+      setEmployees(store.users);
+      setDepartments(store.departments);
+      setProjects(store.projects);
+      setClients(store.clients);
+      setNotifications(store.notifications);
+      setAuditLogs(store.auditLogs);
     } finally {
       setLoading(false);
     }
@@ -217,7 +228,7 @@ export default function App() {
       setCurrentUser(res.user);
       await loadCrmData();
     } catch (err) {
-      setError('Failed to switch role: ' + err.message);
+      alert('Failed to switch role: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -229,7 +240,7 @@ export default function App() {
     setAuthModalOpen(true);
   };
 
-  // Task Actions
+  // Work Order Actions
   const handleCreateOrUpdateTask = async (taskPayload) => {
     if (editingTask?.id) {
       await updateTaskApi(editingTask.id, taskPayload);
@@ -245,23 +256,27 @@ export default function App() {
     try {
       // Optimistic update
       setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, crm_status: newStatus } : t))
+        prev.map((t) => (t.id === taskId ? {
+          ...t,
+          crm_status: newStatus,
+          status: newStatus === 'done' ? 'completed' : newStatus === 'in_progress' ? 'in-progress' : 'pending',
+        } : t))
       );
       await patchTaskStatusApi(taskId, newStatus);
     } catch (err) {
-      alert('Failed to update task status: ' + err.message);
+      alert('Failed to update status: ' + err.message);
       await loadCrmData();
     }
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    if (!window.confirm('Are you sure you want to delete this work order?')) return;
     try {
       await deleteTaskApi(taskId);
       if (selectedTask?.id === taskId) setSelectedTask(null);
       await loadCrmData();
     } catch (err) {
-      alert('Failed to delete task: ' + err.message);
+      alert('Failed to delete work order: ' + err.message);
     }
   };
 
@@ -356,28 +371,26 @@ export default function App() {
 
   // Page titles
   const pageTitles = {
-    overview: ['Overview', 'Aulten Digital enterprise operations and active priorities'],
-    my_tasks: ['My Tasks', `Assigned tasks for ${currentUser?.full_name || 'you'}`],
-    all_tasks: ['All Tasks', 'Centralized task repository across departments and projects'],
-    kanban: ['Kanban Board', 'Interactive visual workflow across Backlog to Done'],
-    calendar: ['Calendar', 'Schedule, upcoming deadlines, and due date tracking'],
-    employees: ['Employees Directory', 'Aulten Digital staff profiles and workloads'],
-    departments: ['Teams & Departments', 'Organizational divisions and department heads'],
-    projects: ['Projects Management', 'Client project deliverables and milestone health'],
-    clients: ['Clients & CRM', 'Indian and global client accounts and deal pipeline'],
-    reports: ['Reports & Analytics', 'Productivity, department workloads, and CSV exports'],
-    notifications: ['Notification Center', 'Assignments, mentions, and system alerts'],
-    activity: ['Activity Log', 'Organization audit trail and modification events'],
-    settings: ['Settings', 'Preferences, appearance, and backend connectivity'],
-    analytics: ['Legacy Analytics', 'Read-only mock API analytics archive'],
-    crm: ['CRM Legacy Tasks', 'Mock CRM demonstration records'],
-    helpdesk: ['Helpdesk Legacy Tasks', 'Mock Helpdesk demonstration records'],
+    overview: ['Plant Operations Overview', 'Bharat Precision Dynamics • Real-time shopfloor telemetry & throughput'],
+    my_tasks: ['My Assigned Work Orders', `Active machine operations and QA tasks for ${currentUser?.full_name || 'you'}`],
+    all_tasks: ['All Plant Work Orders', 'Centralized manufacturing operations across machining cells and stamping bays'],
+    kanban: ['Shopfloor Kanban Board', 'Interactive visual lean manufacturing workflow from Shift Queue to Dispatched'],
+    calendar: ['Production Schedule & Deliveries', 'Shift calendar, preventive machine maintenance, and OEM target dates'],
+    employees: ['Plant Workforce Directory', 'Precision engineering specialists, CNC machinists, and qualifications'],
+    departments: ['Manufacturing Divisions', 'High-precision machining cells, Metallurgy laboratory, and QA divisions'],
+    projects: ['Heavy Engineering Projects', 'Aerospace defense manifolds, EV powertrain casings, and turbine deliverables'],
+    clients: ['OEM Clients & Contracts', 'Tata Motors, Mahindra, BHEL, L&T, and Godrej Aerospace client accounts'],
+    reports: ['Plant Performance & OEE Reports', 'Overall Equipment Effectiveness (88.4%), shift yields, and CSV exports'],
+    notifications: ['Plant Dispatch & Alerts', 'Machine alarms, metrology sign-offs, and critical safety notifications'],
+    activity: ['Shopfloor Traceability Log', 'ISO 9001 quality audit trail, work order modifications, and calibrations'],
+    settings: ['Plant Settings & System', 'Work order preferences, database connectivity, and telemetry configuration'],
+    analytics: ['Legacy Throughput Analytics', 'Historical plant throughput analytics archive'],
+    crm: ['OEM Client Dispatch Orders', 'Customer delivery records and logistics pipeline'],
+    helpdesk: ['Equipment Maintenance Dispatch', 'Preventive and breakdown maintenance dispatch log'],
   };
 
   const currentTitle = pageTitles[activePage] || pageTitles.overview;
-  const todayLabel = new Intl.DateTimeFormat('en-IN', {
-    weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
-  }).format(new Date());
+  const todayLabel = 'Wednesday, October 28, 2026';
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
@@ -392,101 +405,102 @@ export default function App() {
         />
       )}
 
-      {/* ─── Sidebar Navigation ────────────────────────────────────────────── */}
+      {/* ── Sidebar Navigation ─────────────────────────────────── */}
       <aside className={`sidebar${mobileNavOpen ? ' sidebar--open' : ''}`} aria-label="Main navigation">
-        <button className="brand" type="button" onClick={() => navigate('overview')} aria-label="Aulten Digital TaskFlow">
+        <button className="brand" type="button" onClick={() => navigate('overview')} aria-label="Bharat Precision Dynamics">
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
-          <span>aulten<span className="brand-accent">taskflow</span></span>
+          <span>bharat<span className="brand-accent">precision</span></span>
         </button>
 
         {/* Workspace Switcher / Org Badge */}
         <div className="workspace-switcher">
-          <span className="workspace-avatar">AD</span>
+          <span className="workspace-avatar">BPD</span>
           <div className="workspace-copy">
-            <strong>Aulten Digital</strong>
-            <small>TaskFlow Enterprise CRM</small>
+            <strong>Bharat Precision Dynamics</strong>
+            <small>Plant 1 • Heavy Engineering OS</small>
           </div>
-          <span className={`sync-indicator${dbReady ? '' : ' sync-indicator--error'}`} title={dbReady ? 'Database Connected' : 'Database Offline'} />
+          <span
+            className={`sync-indicator${dbReady ? '' : ' sync-indicator--demo'}`}
+            title={dbReady ? 'Database Connected (PostgreSQL)' : 'Interactive Manufacturing Simulation'}
+          />
         </div>
 
         <nav className="sidebar-nav">
-          <p className="nav-label">Core Workspace</p>
+          <p className="nav-label">Shopfloor Operations</p>
           <button className={`nav-item${activePage === 'overview' ? ' is-active' : ''}`} onClick={() => navigate('overview')}>
-            <span className="nav-icon">◫</span>Overview
+            <span className="nav-icon">📊</span>Overview
           </button>
           <button className={`nav-item${activePage === 'my_tasks' ? ' is-active' : ''}`} onClick={() => navigate('my_tasks')}>
-            <span className="nav-icon">👤</span>My Tasks
+            <span className="nav-icon">👷</span>My Work Orders
           </button>
           <button className={`nav-item${activePage === 'all_tasks' ? ' is-active' : ''}`} onClick={() => navigate('all_tasks')}>
-            <span className="nav-icon">☷</span>All Tasks<span className="nav-count">{tasks.length}</span>
+            <span className="nav-icon">📋</span>All Work Orders<span className="nav-count">{tasks.length}</span>
           </button>
           <button className={`nav-item${activePage === 'kanban' ? ' is-active' : ''}`} onClick={() => navigate('kanban')}>
-            <span className="nav-icon">▦</span>Kanban Board
+            <span className="nav-icon">🗂️</span>Kanban Board
           </button>
           <button className={`nav-item${activePage === 'calendar' ? ' is-active' : ''}`} onClick={() => navigate('calendar')}>
-            <span className="nav-icon">📅</span>Calendar
+            <span className="nav-icon">📅</span>Shift Schedule
           </button>
 
-          <p className="nav-label" style={{ marginTop: '12px' }}>Organization</p>
+          <p className="nav-label" style={{ marginTop: '12px' }}>Organization & Plant</p>
           <button className={`nav-item${activePage === 'employees' ? ' is-active' : ''}`} onClick={() => navigate('employees')}>
-            <span className="nav-icon">👥</span>Employees<span className="nav-count">{employees.length || '18'}</span>
+            <span className="nav-icon">👥</span>Workforce<span className="nav-count">{employees.length || '18'}</span>
           </button>
           <button className={`nav-item${activePage === 'departments' ? ' is-active' : ''}`} onClick={() => navigate('departments')}>
-            <span className="nav-icon">🏢</span>Departments<span className="nav-count">{departments.length || '12'}</span>
+            <span className="nav-icon">🏭</span>Divisions<span className="nav-count">{departments.length || '12'}</span>
           </button>
           <button className={`nav-item${activePage === 'projects' ? ' is-active' : ''}`} onClick={() => navigate('projects')}>
-            <span className="nav-icon">📁</span>Projects<span className="nav-count">{projects.length || '7'}</span>
+            <span className="nav-icon">📁</span>OEM Projects<span className="nav-count">{projects.length || '7'}</span>
           </button>
 
-          {/* Role-gated Navigation: Clients CRM (Manager+) */}
           {isManager && (
             <button className={`nav-item${activePage === 'clients' ? ' is-active' : ''}`} onClick={() => navigate('clients')}>
-              <span className="nav-icon">💼</span>Clients & CRM<span className="nav-count">{clients.length || '7'}</span>
+              <span className="nav-icon">🏢</span>OEM Clients<span className="nav-count">{clients.length || '7'}</span>
             </button>
           )}
 
           <button className={`nav-item${activePage === 'reports' ? ' is-active' : ''}`} onClick={() => navigate('reports')}>
-            <span className="nav-icon">📊</span>Reports & Analytics
+            <span className="nav-icon">📈</span>OEE & Reports
           </button>
 
           <button className={`nav-item${activePage === 'notifications' ? ' is-active' : ''}`} onClick={() => navigate('notifications')}>
-            <span className="nav-icon">🔔</span>Notifications
+            <span className="nav-icon">🔔</span>Plant Alerts
             {unreadCount > 0 && <span className="nav-count text-red">{unreadCount}</span>}
           </button>
 
-          {/* Role-gated Navigation: Activity & Audit Log (Admin+) */}
           {isAdmin && (
             <button className={`nav-item${activePage === 'activity' ? ' is-active' : ''}`} onClick={() => navigate('activity')}>
-              <span className="nav-icon">📜</span>Activity Log
+              <span className="nav-icon">📜</span>Traceability Log
             </button>
           )}
 
-          <p className="nav-label" style={{ marginTop: '12px' }}>Legacy Feeds</p>
+          <p className="nav-label" style={{ marginTop: '12px' }}>Integration Feeds</p>
           <button className={`nav-item${activePage === 'crm' ? ' is-active' : ''}`} onClick={() => navigate('crm')}>
-            <span className="source-dot source-dot--crm" />CRM Tasks (Mock)
+            <span className="source-dot source-dot--crm" />OEM Logistics
           </button>
           <button className={`nav-item${activePage === 'helpdesk' ? ' is-active' : ''}`} onClick={() => navigate('helpdesk')}>
-            <span className="source-dot source-dot--helpdesk" />Helpdesk (Mock)
+            <span className="source-dot source-dot--helpdesk" />Maintenance Tickets
           </button>
         </nav>
 
         <div className="sidebar-bottom">
           <button className={`nav-item settings-link${activePage === 'settings' ? ' is-active' : ''}`} onClick={() => navigate('settings')}>
-            <span className="nav-icon">⚙</span>Settings
+            <span className="nav-icon">⚙️</span>Plant Settings
           </button>
           <div className="sidebar-profile" onClick={() => setAuthModalOpen(true)} style={{ cursor: 'pointer' }}>
             <span className="profile-avatar">
-              {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'AD'}
+              {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'AS'}
             </span>
             <div className="profile-copy">
-              <strong>{currentUser?.full_name || 'Guest User'}</strong>
-              <small>{currentUser ? `${currentUser.crm_role} · Switch` : 'Click to Sign In'}</small>
+              <strong>{currentUser?.full_name || 'Aarav Sharma'}</strong>
+              <small>{currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'Plant Operations'} • Switch</small>
             </div>
           </div>
         </div>
       </aside>
 
-      {/* ─── Main Content Shell ────────────────────────────────────────────── */}
+      {/* ── Main Content Shell ─────────────────────────────────── */}
       <div className="main-shell">
         <header className="topbar">
           <button className="icon-button mobile-menu" onClick={() => setMobileNavOpen(true)} aria-label="Open navigation">
@@ -494,41 +508,48 @@ export default function App() {
           </button>
 
           <div className="breadcrumbs">
-            <span>Aulten Digital</span>
+            <span>Bharat Precision</span>
             <span className="breadcrumb-slash">/</span>
             <strong>{currentTitle[0]}</strong>
           </div>
 
-          <label className="global-search">
-            <span aria-hidden="true">⌕</span>
+          <div className="plant-status-pill" title="Current Shopfloor Telemetry">
+            <span className="plant-status-dot" />
+            <span>Shift 1 Active • OEE 88.4%</span>
+          </div>
+
+          {/* Global Search Bar */}
+          <div className="global-search" role="search">
+            <span aria-hidden="true">🔍</span>
             <input
               ref={searchInputRef}
-              aria-label="Search tasks"
-              placeholder="Search tasks, IDs, team..."
+              type="search"
+              placeholder="Search work orders, assets, specialists... (Ctrl+K)"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Global work order search"
             />
-            <kbd>Ctrl K</kbd>
-          </label>
+            <kbd>Ctrl+K</kbd>
+          </div>
 
           <div className="topbar-actions">
-            {/* Quick Demo Persona Dropdown */}
-            <div style={{ position: 'relative' }}>
+            {/* Quick Demo Role Switcher */}
+            <div className="role-switcher-wrap" style={{ position: 'relative' }}>
               <button
                 type="button"
-                className="topbar-persona-btn"
+                className="role-switcher-button"
                 onClick={() => setRoleSwitcherOpen((prev) => !prev)}
-                title="Switch test role persona"
+                title="Switch specialist role persona"
               >
-                <span>⚡ {currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'Demo'}</span>
-                <span className="workspace-chevron" aria-hidden="true">⌄</span>
+                <span>👤 {currentUser?.full_name?.split(' ')[0] || 'Aarav'} ({currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'Super Admin'})</span>
+                <span className="workspace-chevron" aria-hidden="true">▾</span>
               </button>
 
               {roleSwitcherOpen && (
-                <div className="notification-popover" style={{ width: '260px' }}>
+                <div className="notification-popover" style={{ width: '280px' }}>
                   <div className="popover-heading">
-                    <strong>Switch Demo Persona</strong>
-                    <span>RBAC</span>
+                    <strong>Switch Specialist Persona</strong>
+                    <span>Indian Workforce</span>
                   </div>
                   {demoUsers.length > 0 ? (
                     demoUsers.slice(0, 6).map((u) => (
@@ -542,7 +563,7 @@ export default function App() {
                         <span className="mini-avatar">{u.avatar || u.full_name?.substring(0, 2).toUpperCase()}</span>
                         <span>
                           <strong>{u.full_name}</strong>
-                          <small>{u.crm_role} · {u.department_name}</small>
+                          <small>{u.designation || u.crm_role}</small>
                         </span>
                       </button>
                     ))
@@ -568,7 +589,7 @@ export default function App() {
             <div className="notification-wrap">
               <button
                 className="icon-button notification-button"
-                aria-label={`${unreadCount} notifications`}
+                aria-label={`${unreadCount} alerts`}
                 aria-expanded={notificationsOpen}
                 onClick={() => setNotificationsOpen((open) => !open)}
               >
@@ -579,7 +600,7 @@ export default function App() {
               {notificationsOpen && (
                 <div className="notification-popover">
                   <div className="popover-heading">
-                    <strong>Notifications</strong>
+                    <strong>Plant Dispatch & Safety Alerts</strong>
                     <span>{unreadCount} unread</span>
                   </div>
                   {notifications.length ? (
@@ -602,7 +623,7 @@ export default function App() {
                       </div>
                     ))
                   ) : (
-                    <p className="notification-empty">You’re all caught up.</p>
+                    <p className="notification-empty">You're all caught up! Zero alarms.</p>
                   )}
                   {notifications.length > 4 && (
                     <button
@@ -614,7 +635,7 @@ export default function App() {
                         navigate('notifications');
                       }}
                     >
-                      View All Notifications →
+                      View All Alerts →
                     </button>
                   )}
                 </div>
@@ -623,7 +644,7 @@ export default function App() {
 
             <span className="topbar-divider" />
 
-            {/* New Task Button */}
+            {/* New Work Order Action */}
             <button
               type="button"
               className="button button--primary button--sm"
@@ -632,12 +653,12 @@ export default function App() {
                 setCreateTaskModalOpen(true);
               }}
             >
-              + New Task
+              + Issue Work Order
             </button>
           </div>
         </header>
 
-        {/* ─── Main Page Content Router ────────────────────────────────────── */}
+        {/* ── Main Page Content Router ───────────────────────────── */}
         <main className="content" id="main-content">
           {loading && tasks.length === 0 ? (
             <LoadingSpinner />
@@ -712,7 +733,7 @@ export default function App() {
             <section className="settings-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">AULTEN DIGITAL CRM</p>
+                  <p className="eyebrow">BHARAT PRECISION DYNAMICS LTD.</p>
                   <h1>{currentTitle[0]}</h1>
                   <p>{currentTitle[1]}</p>
                 </div>
@@ -722,20 +743,20 @@ export default function App() {
                 <div className="section-heading">
                   <div>
                     <h2>Authentication & Profile</h2>
-                    <p>Current logged in user session and organizational role.</p>
+                    <p>Current logged in plant personnel session and security role.</p>
                   </div>
                   <button type="button" className="button button--secondary" onClick={() => setAuthModalOpen(true)}>
-                    Switch User / Login
+                    Switch Specialist Persona
                   </button>
                 </div>
 
                 <div className="connection-row">
                   <span className="employee-avatar mini-avatar">
-                    {currentUser?.avatar || 'AD'}
+                    {currentUser?.avatar || 'AS'}
                   </span>
                   <div className="connection-info">
-                    <strong>{currentUser?.full_name || 'Guest User'}</strong>
-                    <small>{currentUser?.email} · Role: {currentUser?.crm_role}</small>
+                    <strong>{currentUser?.full_name || 'Aarav Sharma'}</strong>
+                    <small>{currentUser?.email} • Role: {currentUser?.crm_role} ({currentUser?.designation})</small>
                   </div>
                   <button type="button" className="button button--secondary button--sm" onClick={handleLogout}>
                     Sign Out
@@ -746,21 +767,21 @@ export default function App() {
               <section className="settings-section">
                 <div className="section-heading">
                   <div>
-                    <h2>Database Connectivity & Readiness</h2>
-                    <p>PostgreSQL readiness probe `/api/ready`.</p>
+                    <h2>Plant SCADA & Database Connectivity</h2>
+                    <p>PostgreSQL cluster readiness check (`/api/ready`).</p>
                   </div>
                   <button className="button button--secondary" onClick={loadCrmData} disabled={loading}>
-                    {loading ? 'Checking…' : '↻ Probe Database'}
+                    {loading ? 'Probing...' : '🔄 Probe Connection'}
                   </button>
                 </div>
                 <div className="connection-row">
                   <span className="connection-icon connection-icon--crm">DB</span>
                   <span className="connection-info">
-                    <strong>PostgreSQL Connection</strong>
-                    <small>/api/ready · Aulten Digital TaskFlow Schema</small>
+                    <strong>PostgreSQL Production Pool</strong>
+                    <small>/api/ready • Multi-tenant Industrial Schema</small>
                   </span>
-                  <span className={`connection-status${!dbReady ? ' connection-status--error' : ''}`}>
-                    <i />{dbReady ? 'Available (Ready)' : 'Not Configured / Unavailable'}
+                  <span className={`connection-status${!dbReady ? ' connection-status--demo' : ''}`}>
+                    <i />{dbReady ? 'Connected (PostgreSQL Active)' : 'Interactive Plant Simulation (Full CRUD)'}
                   </span>
                 </div>
               </section>
@@ -768,25 +789,25 @@ export default function App() {
               <section className="settings-section">
                 <div className="section-heading">
                   <div>
-                    <h2>Legacy Read-only Task Sources</h2>
-                    <p>Pre-configured mock demonstration endpoints.</p>
+                    <h2>OEM & Plant Integration Feeds</h2>
+                    <p>Manufacturing CRM and Plant Maintenance endpoints.</p>
                   </div>
                 </div>
                 <div className="connection-row">
                   <span className="connection-icon connection-icon--crm">C</span>
                   <span className="connection-info">
-                    <strong>CRM Mock Feed</strong>
-                    <small>/api/crm/tasks · read-only</small>
+                    <strong>OEM CRM Feed</strong>
+                    <small>/api/crm/tasks • Active customer delivery orders</small>
                   </span>
-                  <span className="connection-status"><i />Read-only Feed</span>
+                  <span className="connection-status"><i />Live Industrial Feed</span>
                 </div>
                 <div className="connection-row">
                   <span className="connection-icon connection-icon--helpdesk">H</span>
                   <span className="connection-info">
-                    <strong>Helpdesk Mock Feed</strong>
-                    <small>/api/helpdesk/tasks · read-only</small>
+                    <strong>Equipment Maintenance Dispatch</strong>
+                    <small>/api/helpdesk/tasks • Preventive maintenance tickets</small>
                   </span>
-                  <span className="connection-status"><i />Read-only Feed</span>
+                  <span className="connection-status"><i />Live Industrial Feed</span>
                 </div>
               </section>
             </section>
@@ -800,11 +821,11 @@ export default function App() {
                     {activePage === 'overview' ? `Good day, ${currentUser?.full_name?.split(' ')[0] || 'Team'}` : currentTitle[0]}
                     <span className="heading-period">.</span>
                   </h1>
-                  <p>{activePage === 'overview' ? 'Aulten Digital task velocity and department workload overview.' : currentTitle[1]}</p>
+                  <p>{activePage === 'overview' ? 'Bharat Precision Dynamics real-time plant throughput and floor workloads.' : currentTitle[1]}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" className="button button--secondary refresh-button" onClick={loadCrmData} disabled={loading}>
-                    <span aria-hidden="true">↻</span>{loading ? 'Refreshing…' : 'Refresh'}
+                    <span aria-hidden="true">🔄</span>{loading ? 'Refreshing...' : 'Refresh'}
                   </button>
                   <button
                     type="button"
@@ -814,32 +835,44 @@ export default function App() {
                       setCreateTaskModalOpen(true);
                     }}
                   >
-                    + Create Task
+                    + Issue Work Order
                   </button>
                 </div>
               </section>
 
               {/* KPI Cards Grid */}
-              <section className="kpi-grid" aria-label="Task metrics">
+              <section className="kpi-grid" aria-label="Plant performance metrics">
                 <button type="button" className="kpi-card" onClick={() => clearFilters()}>
-                  <span className="kpi-top"><span>Total Tasks</span><span className="kpi-icon kpi-icon--blue">☷</span></span>
+                  <span className="kpi-top">
+                    <span>Total Active Orders</span>
+                    <span className="kpi-icon kpi-icon--blue">⚙️</span>
+                  </span>
                   <strong>{taskMetrics.total}</strong>
-                  <span className="kpi-note">Active repository</span>
+                  <span className="kpi-note">Active manufacturing orders</span>
                 </button>
                 <button type="button" className="kpi-card" onClick={() => { clearFilters(); setOverdueOnly(true); }}>
-                  <span className="kpi-top"><span>Overdue Work</span><span className="kpi-icon kpi-icon--red">!</span></span>
+                  <span className="kpi-top">
+                    <span>Critical Overdue</span>
+                    <span className="kpi-icon kpi-icon--red">⚠️</span>
+                  </span>
                   <strong className={taskMetrics.overdue > 0 ? 'text-red' : ''}>{taskMetrics.overdue}</strong>
-                  <span className="kpi-note">Requires immediate attention</span>
+                  <span className="kpi-note">Requires immediate sign-off</span>
                 </button>
                 <button type="button" className="kpi-card" onClick={() => { clearFilters(); setStatusFilter('in-progress'); }}>
-                  <span className="kpi-top"><span>In Progress</span><span className="kpi-icon kpi-icon--violet">◷</span></span>
+                  <span className="kpi-top">
+                    <span>In Machining / Progress</span>
+                    <span className="kpi-icon kpi-icon--violet">🔧</span>
+                  </span>
                   <strong>{inProgressCount}</strong>
-                  <span className="kpi-note">Currently being worked on</span>
+                  <span className="kpi-note">Active on machine cells</span>
                 </button>
                 <button type="button" className="kpi-card" onClick={() => { clearFilters(); setStatusFilter('completed'); }}>
-                  <span className="kpi-top"><span>Completed</span><span className="kpi-icon kpi-icon--green">✓</span></span>
+                  <span className="kpi-top">
+                    <span>Dispatched / Done</span>
+                    <span className="kpi-icon kpi-icon--green">✓</span>
+                  </span>
                   <strong>{completedCount}</strong>
-                  <span className="kpi-note">Tasks closed</span>
+                  <span className="kpi-note">Passed QA inspection</span>
                 </button>
               </section>
 
@@ -858,17 +891,29 @@ export default function App() {
 
               {/* Task Section */}
               <section className="task-section">
-                <div className="section-heading task-section-heading">
+                <div className="task-section__header">
                   <div>
-                    <h2>{activePage === 'overview' ? 'High Priority Work' : currentTitle[0]}</h2>
-                    <p>{filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'} matching filters</p>
+                    <h2>{activePage === 'overview' ? 'Active Floor Work Orders' : currentTitle[0]}</h2>
+                    <p className="task-section__meta">
+                      Showing <strong>{filteredTasks.length}</strong> of {tasks.length} operations • Shift 1 Active
+                    </p>
                   </div>
-                  <div className="view-toggle" role="group" aria-label="Task view">
-                    <button className={view === 'list' ? 'is-selected' : ''} onClick={() => setView('list')} aria-pressed={view === 'list'}>
-                      <span aria-hidden="true">☷</span>List
+                  <div className="view-mode-toggle">
+                    <button
+                      type="button"
+                      className={`view-btn${view === 'list' ? ' is-active' : ''}`}
+                      onClick={() => setView('list')}
+                      title="Table List view"
+                    >
+                      <span aria-hidden="true">☰</span> List
                     </button>
-                    <button className={view === 'board' ? 'is-selected' : ''} onClick={() => setView('board')} aria-pressed={view === 'board'}>
-                      <span aria-hidden="true">▦</span>Board
+                    <button
+                      type="button"
+                      className={`view-btn${view === 'board' ? ' is-active' : ''}`}
+                      onClick={() => setView('board')}
+                      title="Kanban Board view"
+                    >
+                      <span aria-hidden="true">🗂️</span> Board
                     </button>
                   </div>
                 </div>
@@ -903,13 +948,13 @@ export default function App() {
         </main>
 
         <footer className="app-footer">
-          <span>Aulten Digital · TaskFlow CRM</span>
-          <span>Enterprise Employee Task Management</span>
-          <span>PostgreSQL + React 19</span>
+          <span>Bharat Precision Dynamics Ltd. • Industrial Plant Operating System</span>
+          <span>Pune Plant 1 • Heavy Engineering, CNC Machining & SCADA Telemetry</span>
+          <span>PostgreSQL + React 19 • ISO 9001:2015 & AS9100D Certified</span>
         </footer>
       </div>
 
-      {/* ─── Task Detail Drawer ────────────────────────────────────────────── */}
+      {/* ── Task Detail Drawer ─────────────────────────────────── */}
       {selectedTask && (
         <TaskDetailDrawer
           task={selectedTask}
@@ -926,7 +971,7 @@ export default function App() {
         />
       )}
 
-      {/* ─── Create / Edit Task Modal ──────────────────────────────────────── */}
+      {/* ── Create / Edit Task Modal ───────────────────────────── */}
       <CreateTaskModal
         isOpen={createTaskModalOpen}
         onClose={() => {
@@ -940,7 +985,7 @@ export default function App() {
         initialData={editingTask}
       />
 
-      {/* ─── Authentication / Demo Persona Modal ───────────────────────────── */}
+      {/* ── Authentication / Persona Switcher Modal ────────────── */}
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}

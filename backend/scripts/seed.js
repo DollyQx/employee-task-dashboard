@@ -2,7 +2,7 @@ const { getPool, closeDatabasePool } = require('../db/pool');
 const { hashPassword } = require('../utils/auth');
 
 async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_PASSWORD || 'TaskFlowDemo@2026!' } = {}) {
-  console.log('Seeding Aulten Digital TaskFlow CRM demo data...');
+  console.log('Seeding Bharat Precision Dynamics / Aulten TaskFlow CRM demo data...');
 
   const passwordHash = await hashPassword(demoPassword);
 
@@ -13,29 +13,30 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
   if (orgRes.rows.length === 0) {
     const newOrg = await pool.query(
       `INSERT INTO organizations (name, slug)
-       VALUES ('Aulten Digital', $1)
+       VALUES ('Bharat Precision Dynamics Ltd.', $1)
        RETURNING id`,
       [orgSlug]
     );
     orgId = newOrg.rows[0].id;
   } else {
     orgId = orgRes.rows[0].id;
+    await pool.query('UPDATE organizations SET name = $1 WHERE id = $2', ['Bharat Precision Dynamics Ltd.', orgId]);
   }
 
-  // 2. Departments
+  // 2. Manufacturing Departments
   const departmentsData = [
-    { name: 'Engineering', code: 'ENG', description: 'Core software architecture and full-stack development.' },
-    { name: 'Web Development', code: 'WEB', description: 'Modern responsive web applications and portals.' },
-    { name: 'Mobile Development', code: 'MOB', description: 'iOS and Android native and cross-platform apps.' },
-    { name: 'UI/UX Design', code: 'DES', description: 'User research, wireframing, and interactive design systems.' },
-    { name: 'QA and Testing', code: 'QA', description: 'Manual testing, automated regression, and load testing.' },
-    { name: 'DevOps and Cloud', code: 'OPS', description: 'CI/CD pipelines, container orchestration, and AWS/GCP cloud.' },
-    { name: 'Cybersecurity', code: 'SEC', description: 'Penetration testing, compliance, and threat mitigation.' },
-    { name: 'Sales and Business Development', code: 'SAL', description: 'Enterprise client acquisition and partnerships.' },
-    { name: 'Digital Marketing', code: 'MKT', description: 'SEO, performance marketing, and digital branding.' },
-    { name: 'Human Resources', code: 'HR', description: 'Talent recruitment, culture, and employee welfare.' },
-    { name: 'Operations', code: 'OPS2', description: 'Corporate logistics, IT infrastructure, and facilities.' },
-    { name: 'Customer Support', code: 'SUP', description: '24/7 client helpdesk, SLA tracking, and ticket resolution.' },
+    { name: 'Plant Operations & Production', code: 'OPS', description: 'Factory floor production scheduling, cycle-time tracking, and shift throughput management.' },
+    { name: 'CNC Machining & Tooling', code: 'CNC', description: 'High-precision 5-axis milling, wire EDM, carbide tooling, and micrometric tolerance machining.' },
+    { name: 'Quality Assurance & ISO 9001', code: 'QA', description: 'Coordinate measuring machine (CMM) inspections, defect Pareto analysis, and ISO 9001 audits.' },
+    { name: 'Assembly & Heavy Fabrication', code: 'ASM', description: 'Robotic welding cells, sub-assembly integration, torque-spec fastening, and transmission assembly.' },
+    { name: 'Preventive Maintenance & Reliability', code: 'MNT', description: 'Vibration monitoring, hydraulic press overhauls, predictive maintenance, and machine uptime.' },
+    { name: 'Metallurgy & Materials Testing Lab', code: 'MET', description: 'Optical emission spectrometry, tensile elongation, Charpy impact tests, and case hardness analysis.' },
+    { name: 'Supply Chain & Steel Sourcing', code: 'SCM', description: 'Procurement of hot-rolled steel coils, aluminum billets, forging ingots, and vendor logistics.' },
+    { name: 'Environment, Health & Safety (EHS)', code: 'EHS', description: 'Zero-harm shop floor enforcement, OSHA / ISO 45001 compliance, machine safety interlocks, and PPE.' },
+    { name: 'Industrial Automation & SCADA', code: 'AUT', description: 'Siemens S7-1500 PLC programming, KUKA robotic welding kinematics, and IoT SCADA gateways.' },
+    { name: 'Die Stamping & Forging', code: 'STP', description: '1,200-ton hydraulic stamping presses, progressive blanking dies, and hot forging operations.' },
+    { name: 'Dispatch & Finished Goods Logistics', code: 'DSP', description: 'Anti-corrosion VCI barrier packaging, wooden crating, barcode tracking, and OEM deliveries.' },
+    { name: 'Plant HR & Workforce Governance', code: 'HR', description: 'Worker shift rostering, technical apprenticeship training, industrial relations, and welfare.' },
   ];
 
   const deptMap = {};
@@ -52,186 +53,186 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
     deptMap[dept.name] = res.rows[0].id;
   }
 
-  // 3. Indian Employees
+  // 3. Indian Manufacturing Personnel (18 employees)
   const employeesData = [
     {
       name: 'Aarav Sharma',
       email: 'aarav.sharma@example.com',
-      empId: 'AD-0101',
+      empId: 'MFG-0101',
       crmRole: 'super_admin',
       coreRole: 'owner',
-      dept: 'Engineering',
-      designation: 'Chief Technology Officer (CTO)',
+      dept: 'Plant Operations & Production',
+      designation: 'VP of Plant Operations & Manufacturing',
       phone: '+91 98101 23456',
     },
     {
       name: 'Priya Verma',
       email: 'priya.verma@example.com',
-      empId: 'AD-0102',
+      empId: 'MFG-0102',
       crmRole: 'admin',
       coreRole: 'admin',
-      dept: 'Engineering',
-      designation: 'Director of Engineering',
+      dept: 'Quality Assurance & ISO 9001',
+      designation: 'Head of Quality Assurance & Metrology',
       phone: '+91 98102 34567',
     },
     {
       name: 'Sneha Gupta',
       email: 'sneha.gupta@example.com',
-      empId: 'AD-0103',
+      empId: 'MFG-0103',
       crmRole: 'manager',
       coreRole: 'member',
-      dept: 'Web Development',
-      designation: 'Engineering Manager - Web',
+      dept: 'Metallurgy & Materials Testing Lab',
+      designation: 'Metallurgy & Lab Testing Lead',
       phone: '+91 98103 45678',
+    },
+    {
+      name: 'Rajesh Kumar',
+      email: 'rajesh.kumar@example.com',
+      empId: 'MFG-0104',
+      crmRole: 'manager',
+      coreRole: 'member',
+      dept: 'Plant Operations & Production',
+      designation: 'General Manager of Production Lines',
+      phone: '+91 98104 56789',
+    },
+    {
+      name: 'Vikram Malhotra',
+      email: 'vikram.malhotra@example.com',
+      empId: 'MFG-0105',
+      crmRole: 'manager',
+      coreRole: 'member',
+      dept: 'CNC Machining & Tooling',
+      designation: 'Lead CNC Machining & Tooling Engineer',
+      phone: '+91 98105 67890',
     },
     {
       name: 'Arjun Singh',
       email: 'arjun.singh@example.com',
-      empId: 'AD-0104',
+      empId: 'MFG-0106',
       crmRole: 'manager',
       coreRole: 'member',
-      dept: 'DevOps and Cloud',
-      designation: 'DevOps & Cloud Lead',
-      phone: '+91 98104 56789',
-    },
-    {
-      name: 'Neha Mishra',
-      email: 'neha.mishra@example.com',
-      empId: 'AD-0105',
-      crmRole: 'manager',
-      coreRole: 'member',
-      dept: 'UI/UX Design',
-      designation: 'Head of Product Design',
-      phone: '+91 98105 67890',
-    },
-    {
-      name: 'Rohan Patel',
-      email: 'rohan.patel@example.com',
-      empId: 'AD-0106',
-      crmRole: 'manager',
-      coreRole: 'member',
-      dept: 'QA and Testing',
-      designation: 'Lead QA Engineer',
+      dept: 'Industrial Automation & SCADA',
+      designation: 'SCADA & Industrial Automation Lead',
       phone: '+91 98106 78901',
     },
     {
-      name: 'Vivek Yadav',
-      email: 'vivek.yadav@example.com',
-      empId: 'AD-0107',
+      name: 'Ananya Iyer',
+      email: 'ananya.iyer@example.com',
+      empId: 'MFG-0107',
       crmRole: 'manager',
       coreRole: 'member',
-      dept: 'Sales and Business Development',
-      designation: 'Sales & CRM Director',
+      dept: 'Supply Chain & Steel Sourcing',
+      designation: 'Supply Chain & Raw Materials Head',
       phone: '+91 98107 89012',
     },
     {
       name: 'Rahul Kumar',
       email: 'rahul.kumar@example.com',
-      empId: 'AD-0108',
+      empId: 'MFG-0108',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'Engineering',
-      designation: 'Senior Full-Stack Developer',
+      dept: 'CNC Machining & Tooling',
+      designation: 'Senior 5-Axis CNC Mill Specialist',
       phone: '+91 98108 90123',
     },
     {
-      name: 'Ananya Das',
-      email: 'ananya.das@example.com',
-      empId: 'AD-0109',
+      name: 'Amit Patel',
+      email: 'amit.patel@example.com',
+      empId: 'MFG-0109',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'Web Development',
-      designation: 'Frontend Engineer (React)',
+      dept: 'Assembly & Heavy Fabrication',
+      designation: 'Robotic MIG & TIG Welding Specialist',
       phone: '+91 98109 01234',
     },
     {
       name: 'Pooja Mehta',
       email: 'pooja.mehta@example.com',
-      empId: 'AD-0110',
+      empId: 'MFG-0110',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'Engineering',
-      designation: 'Backend Developer (Node.js/PostgreSQL)',
+      dept: 'Environment, Health & Safety (EHS)',
+      designation: 'EHS & Plant Safety Compliance Auditor',
       phone: '+91 98110 12345',
     },
     {
-      name: 'Aditya Joshi',
-      email: 'aditya.joshi@example.com',
-      empId: 'AD-0111',
+      name: 'Suresh Nair',
+      email: 'suresh.nair@example.com',
+      empId: 'MFG-0111',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'DevOps and Cloud',
-      designation: 'DevOps Engineer (Kubernetes/AWS)',
+      dept: 'Preventive Maintenance & Reliability',
+      designation: 'Hydraulic Press & Mechanical Systems Technician',
       phone: '+91 98111 23456',
+    },
+    {
+      name: 'Manoj Deshmukh',
+      email: 'manoj.deshmukh@example.com',
+      empId: 'MFG-0112',
+      crmRole: 'employee',
+      coreRole: 'member',
+      dept: 'Die Stamping & Forging',
+      designation: '1200T Hydraulic Stamping Supervisor',
+      phone: '+91 98112 34567',
     },
     {
       name: 'Kavya Nair',
       email: 'kavya.nair@example.com',
-      empId: 'AD-0112',
+      empId: 'MFG-0113',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'UI/UX Design',
-      designation: 'Senior UI/UX Designer',
-      phone: '+91 98112 34567',
-    },
-    {
-      name: 'Amit Sinha',
-      email: 'amit.sinha@example.com',
-      empId: 'AD-0113',
-      crmRole: 'employee',
-      coreRole: 'member',
-      dept: 'Cybersecurity',
-      designation: 'Cybersecurity Analyst',
+      dept: 'Assembly & Heavy Fabrication',
+      designation: 'Sub-Assembly Integration Line Lead',
       phone: '+91 98113 45678',
     },
     {
-      name: 'Shreya Iyer',
-      email: 'shreya.iyer@example.com',
-      empId: 'AD-0114',
+      name: 'Deepak Chauhan',
+      email: 'deepak.chauhan@example.com',
+      empId: 'MFG-0114',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'QA and Testing',
-      designation: 'QA Automation Engineer (Playwright)',
+      dept: 'Quality Assurance & ISO 9001',
+      designation: 'CMM Metrology & Optical Inspection Specialist',
       phone: '+91 98114 56789',
     },
     {
-      name: 'Karan Malhotra',
-      email: 'karan.malhotra@example.com',
-      empId: 'AD-0115',
+      name: 'Sunita Rao',
+      email: 'sunita.rao@example.com',
+      empId: 'MFG-0115',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'Mobile Development',
-      designation: 'Mobile Engineer (React Native)',
+      dept: 'Metallurgy & Materials Testing Lab',
+      designation: 'Non-Destructive Testing (NDT) & Ultrasonic Inspector',
       phone: '+91 98115 67890',
     },
     {
-      name: 'Divya Pillai',
-      email: 'divya.pillai@example.com',
-      empId: 'AD-0116',
+      name: 'Rohan Joshi',
+      email: 'rohan.joshi@example.com',
+      empId: 'MFG-0116',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'Digital Marketing',
-      designation: 'Digital Marketing Specialist',
+      dept: 'Plant Operations & Production',
+      designation: 'Lean Six Sigma & 5S Continuous Improvement Lead',
       phone: '+91 98116 78901',
     },
     {
-      name: 'Manish Tiwari',
-      email: 'manish.tiwari@example.com',
-      empId: 'AD-0117',
+      name: 'Meera Nambiar',
+      email: 'meera.nambiar@example.com',
+      empId: 'MFG-0117',
       crmRole: 'employee',
       coreRole: 'member',
-      dept: 'Customer Support',
-      designation: 'Customer Success Specialist',
+      dept: 'Dispatch & Finished Goods Logistics',
+      designation: 'Finished Goods Inspection & OEM Shipping Officer',
       phone: '+91 98117 89012',
     },
     {
       name: 'Ritu Agarwal',
       email: 'ritu.agarwal@example.com',
-      empId: 'AD-0118',
+      empId: 'MFG-0118',
       crmRole: 'admin',
       coreRole: 'admin',
-      dept: 'Human Resources',
-      designation: 'HR & People Operations Lead',
+      dept: 'Plant HR & Workforce Governance',
+      designation: 'Plant HR & Industrial Relations Lead',
       phone: '+91 98118 90123',
     },
   ];
@@ -275,794 +276,722 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
   }
 
   // Set Department Heads
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Priya Verma'], deptMap['Engineering']]);
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Sneha Gupta'], deptMap['Web Development']]);
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Arjun Singh'], deptMap['DevOps and Cloud']]);
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Neha Mishra'], deptMap['UI/UX Design']]);
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Rohan Patel'], deptMap['QA and Testing']]);
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Vivek Yadav'], deptMap['Sales and Business Development']]);
-  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Ritu Agarwal'], deptMap['Human Resources']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Rajesh Kumar'], deptMap['Plant Operations & Production']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Vikram Malhotra'], deptMap['CNC Machining & Tooling']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Priya Verma'], deptMap['Quality Assurance & ISO 9001']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Sneha Gupta'], deptMap['Metallurgy & Materials Testing Lab']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Arjun Singh'], deptMap['Industrial Automation & SCADA']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Ananya Iyer'], deptMap['Supply Chain & Steel Sourcing']]);
+  await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Ritu Agarwal'], deptMap['Plant HR & Workforce Governance']]);
 
-  // 4. Clients (CRM)
+  // 4. Industrial Clients (CRM)
   const clientsData = [
     {
-      company: 'Tata Consultancy Systems',
-      contact: 'Rajesh Gupta',
-      email: 'rajesh.gupta@example-tata.test',
-      phone: '+91 22 6778 1234',
+      company: 'Tata Motors Commercial Vehicles',
+      contact: 'Rajesh Sen',
+      email: 'rajesh.sen@tatamotors-demo.in',
+      phone: '+91 20 6613 4000',
       stage: 'Won',
-      value: 1250000,
-      source: 'Referral',
-      owner: userMap['Vivek Yadav'],
-      action: 'Quarterly architecture review',
-      date: '2026-11-15',
-    },
-    {
-      company: 'Reliance Retail Innovations',
-      contact: 'Meera Kapoor',
-      email: 'meera.k@example-reliance.test',
-      phone: '+91 22 2490 5678',
-      stage: 'Proposal',
-      value: 2800000,
-      source: 'Direct',
-      owner: userMap['Vivek Yadav'],
-      action: 'Submit microservices migration proposal',
-      date: '2026-11-04',
-    },
-    {
-      company: 'Infosys FinTech Lab',
-      contact: 'Suresh Nambiar',
-      email: 'suresh.n@example-infosys.test',
-      phone: '+91 80 2852 9012',
-      stage: 'Negotiation',
-      value: 1950000,
-      source: 'Partner',
-      owner: userMap['Vivek Yadav'],
-      action: 'Finalize SLA and security audit terms',
-      date: '2026-11-08',
-    },
-    {
-      company: 'Mahindra Logistics Tech',
-      contact: 'Sunita Rao',
-      email: 'sunita.rao@example-mahindra.test',
-      phone: '+91 22 2844 3456',
-      stage: 'Won',
-      value: 850000,
-      source: 'Website',
-      owner: userMap['Vivek Yadav'],
-      action: 'Sprint 3 demo presentation',
-      date: '2026-11-10',
-    },
-    {
-      company: 'Bharti Airtel Enterprise',
-      contact: 'Vikram Sethi',
-      email: 'vikram.sethi@example-airtel.test',
-      phone: '+91 11 4166 7890',
-      stage: 'Qualified',
-      value: 1400000,
-      source: 'LinkedIn',
-      owner: userMap['Vivek Yadav'],
-      action: 'Schedule technical discovery call',
+      value: 14500000,
+      source: 'OEM Contract',
+      owner: userMap['Rajesh Kumar'],
+      action: 'Deliver monthly consignment of 500 planetary gearbox casings.',
       date: '2026-11-12',
     },
     {
-      company: 'Flipkart Commerce Cloud',
-      contact: 'Deepak Reddy',
-      email: 'deepak.r@example-flipkart.test',
-      phone: '+91 80 4900 1122',
-      stage: 'Won',
-      value: 3200000,
-      source: 'Referral',
-      owner: userMap['Vivek Yadav'],
-      action: 'Review peak season load testing reports',
-      date: '2026-11-02',
+      company: 'Mahindra Heavy Industries',
+      contact: 'Sunil Deshpande',
+      email: 'deshpande.s@mahindra-demo.in',
+      phone: '+91 2135 64 2000',
+      stage: 'Proposal',
+      value: 28000000,
+      source: 'Tender RFP',
+      owner: userMap['Rajesh Kumar'],
+      action: 'Submit final technical quote for hydraulic tractor driveline shafts.',
+      date: '2026-11-04',
     },
     {
-      company: 'Zomato Hyperlocal Delivery',
-      contact: 'Ankit Bansal',
-      email: 'ankit.b@example-zomato.test',
-      phone: '+91 124 456 7890',
-      stage: 'Contacted',
-      value: 650000,
-      source: 'Direct',
-      owner: userMap['Vivek Yadav'],
-      action: 'Follow up on developer dashboard demo',
-      date: '2026-11-06',
+      company: 'Bharat Heavy Electricals Ltd. (BHEL)',
+      contact: 'K. S. Narayanan',
+      email: 'ks.narayanan@bhel-demo.in',
+      phone: '+91 431 257 4110',
+      stage: 'Negotiation',
+      value: 19500000,
+      source: 'PSU Partnership',
+      owner: userMap['Aarav Sharma'],
+      action: 'Finalize ultrasonic NDT acceptance criteria for ASTM A182 forgings.',
+      date: '2026-11-08',
+    },
+    {
+      company: 'Larsen & Toubro Heavy Engineering',
+      contact: 'Anirudh Roy',
+      email: 'anirudh.roy@lnt-demo.in',
+      phone: '+91 261 286 1000',
+      stage: 'Won',
+      value: 34000000,
+      source: 'Strategic Alliance',
+      owner: userMap['Aarav Sharma'],
+      action: 'Release inspection report for 8 nuclear-spec nozzle flanges.',
+      date: '2026-11-20',
+    },
+    {
+      company: 'Maruti Suzuki Powertrain Division',
+      contact: 'Vikram Bedi',
+      email: 'v.bedi@marutisuzuki-demo.in',
+      phone: '+91 124 234 0001',
+      stage: 'Won',
+      value: 21000000,
+      source: 'OEM Annual Tender',
+      owner: userMap['Rajesh Kumar'],
+      action: 'Ship batch #404 of precision cam shafts with zero surface defect cert.',
+      date: '2026-11-15',
+    },
+    {
+      company: 'Ashok Leyland Defense Division',
+      contact: 'Col. Ranjit Menon (Retd.)',
+      email: 'ranjit.menon@ashokleyland-demo.in',
+      phone: '+91 4344 40 4000',
+      stage: 'Negotiation',
+      value: 18500000,
+      source: 'Defense Procurement',
+      owner: userMap['Priya Verma'],
+      action: 'Complete ballistic impact testing on forged armored wheel hubs.',
+      date: '2026-11-07',
+    },
+    {
+      company: 'Godrej Aerospace & Precision Systems',
+      contact: 'Dr. Shilpa Kulkarni',
+      email: 'shilpa.k@godrej-demo.in',
+      phone: '+91 22 6796 5656',
+      stage: 'Won',
+      value: 39000000,
+      source: 'Space & Defense RFP',
+      owner: userMap['Vikram Malhotra'],
+      action: 'Deliver 5-axis milled titanium fuel injector heads with CMM report.',
+      date: '2026-11-18',
     },
   ];
 
   const clientMap = {};
   for (const c of clientsData) {
-    const res = await pool.query(
-      `INSERT INTO clients (
-         organization_id, company_name, contact_person, email, phone, lead_source,
-         lead_owner_id, pipeline_stage, deal_value, next_action, follow_up_date
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-       RETURNING id, company_name`,
-      [
-        orgId,
-        c.company,
-        c.contact,
-        c.email,
-        c.phone,
-        c.source,
-        c.owner,
-        c.stage,
-        c.value,
-        c.action,
-        c.date,
-      ]
+    const existingClient = await pool.query(
+      'SELECT id FROM clients WHERE organization_id = $1 AND company_name = $2',
+      [orgId, c.company]
     );
-    clientMap[c.company] = res.rows[0].id;
+    if (existingClient.rows.length === 0) {
+      const res = await pool.query(
+        `INSERT INTO clients (
+           organization_id, company_name, contact_person, email, phone, lead_source,
+           lead_owner_id, pipeline_stage, deal_value, next_action, follow_up_date
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         RETURNING id, company_name`,
+        [
+          orgId,
+          c.company,
+          c.contact,
+          c.email,
+          c.phone,
+          c.source,
+          c.owner,
+          c.stage,
+          c.value,
+          c.action,
+          c.date,
+        ]
+      );
+      clientMap[c.company] = res.rows[0].id;
+    } else {
+      clientMap[c.company] = existingClient.rows[0].id;
+    }
   }
 
-  // 5. Projects
+  // 5. Manufacturing Projects
   const projectsData = [
     {
-      name: 'Corporate Website Revamp',
-      desc: 'Next.js 15 redesign for high conversion and core web vitals.',
-      client: clientMap['Tata Consultancy Systems'],
-      owner: userMap['Sneha Gupta'],
+      name: 'Project Garuda: EV Powertrain Casings',
+      desc: 'High-pressure die-cast aluminum transmission casings for commercial electric delivery vehicles.',
+      client: clientMap['Tata Motors Commercial Vehicles'],
+      owner: userMap['Rajesh Kumar'],
       status: 'active',
       health: 'good',
-      budget: 650000,
-      start: '2026-09-01',
-      end: '2026-12-15',
+      budget: 14500000,
+      start: '2026-08-01',
+      end: '2027-03-31',
     },
     {
-      name: 'Client CRM Portal',
-      desc: 'Custom multi-tenant enterprise portal with secure role-based access.',
-      client: clientMap['Infosys FinTech Lab'],
-      owner: userMap['Priya Verma'],
+      name: 'Project Trishul: Defense Aerospace Hydraulic Manifolds',
+      desc: '5-axis wire-EDM milled Grade 5 Titanium manifolds for defense hydraulic actuator controls.',
+      client: clientMap['Godrej Aerospace & Precision Systems'],
+      owner: userMap['Vikram Malhotra'],
       status: 'active',
       health: 'good',
-      budget: 1450000,
-      start: '2026-08-15',
+      budget: 39000000,
+      start: '2026-06-15',
       end: '2026-12-31',
     },
     {
-      name: 'E-commerce Platform',
-      desc: 'High-throughput catalog and checkout services with Redis caching.',
-      client: clientMap['Flipkart Commerce Cloud'],
-      owner: userMap['Rahul Kumar'],
-      status: 'active',
-      health: 'at_risk',
-      budget: 2200000,
-      start: '2026-07-01',
-      end: '2026-11-30',
-    },
-    {
-      name: 'Employee Dashboard',
-      desc: 'Internal TaskFlow CRM dashboard for team tracking and workload analytics.',
-      client: clientMap['Mahindra Logistics Tech'],
-      owner: userMap['Aarav Sharma'],
+      name: 'Project Vayu: High-Pressure Steam Turbine Blading',
+      desc: 'Precision forged Inconel 718 aerofoil blades for supercritical 800MW thermal plant turbines.',
+      client: clientMap['Bharat Heavy Electricals Ltd. (BHEL)'],
+      owner: userMap['Priya Verma'],
       status: 'active',
       health: 'good',
-      budget: 450000,
-      start: '2026-10-01',
-      end: '2026-11-20',
+      budget: 19500000,
+      start: '2026-07-01',
+      end: '2027-02-28',
     },
     {
-      name: 'Cloud Migration',
-      desc: 'Lift and shift legacy servers to automated AWS Kubernetes clusters.',
-      client: clientMap['Reliance Retail Innovations'],
+      name: 'Project Surya: Solar Heavy Tracker Gearbox Assembly',
+      desc: 'Heavy duty planetary reduction gearboxes engineered for 25-year desert solar tracker torque resistance.',
+      client: clientMap['Mahindra Heavy Industries'],
+      owner: userMap['Rajesh Kumar'],
+      status: 'active',
+      health: 'good',
+      budget: 28000000,
+      start: '2026-09-01',
+      end: '2027-05-30',
+    },
+    {
+      name: 'Project Chetna: Stamping Line 4 IoT SCADA Modernization',
+      desc: 'Retrofitting Siemens S7-1500 PLCs and vibration accelerometers on 1200T stamping lines.',
+      client: null,
       owner: userMap['Arjun Singh'],
       status: 'active',
       health: 'good',
-      budget: 1800000,
-      start: '2026-09-15',
-      end: '2027-01-31',
+      budget: 8500000,
+      start: '2026-08-15',
+      end: '2026-11-30',
     },
     {
-      name: 'Security Assessment',
-      desc: 'SOC2 Type II and ISO 27001 vulnerability audit and remediation.',
-      client: clientMap['Tata Consultancy Systems'],
-      owner: userMap['Amit Sinha'],
+      name: 'Project Raksha: ISO 45001 EHS Zero-Harm Shopfloor Program',
+      desc: 'Installation of automated laser safety light curtains and dust exhaust scrubbers in cold-forge bays.',
+      client: null,
+      owner: userMap['Pooja Mehta'],
       status: 'active',
       health: 'good',
-      budget: 750000,
-      start: '2026-10-10',
-      end: '2026-11-25',
+      budget: 4500000,
+      start: '2026-05-01',
+      end: '2026-11-15',
     },
     {
-      name: 'Mobile App Release',
-      desc: 'React Native v0.78 client app with biometric login and push alerts.',
-      client: clientMap['Zomato Hyperlocal Delivery'],
-      owner: userMap['Karan Malhotra'],
-      status: 'planning',
+      name: 'Project Kaizen: Lean 5S & OEE 88% Throughput Target',
+      desc: 'Standardized SMED quick die changeovers, tooling rack shadows, and scrap reduction program.',
+      client: null,
+      owner: userMap['Rohan Joshi'],
+      status: 'active',
       health: 'good',
-      budget: 950000,
-      start: '2026-11-01',
-      end: '2027-02-28',
+      budget: 3200000,
+      start: '2026-07-01',
+      end: '2026-12-15',
     },
   ];
 
   const projectMap = {};
   for (const p of projectsData) {
-    const res = await pool.query(
-      `INSERT INTO projects (
-         organization_id, name, description, client_id, owner_id, status, health, budget, start_date, end_date
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-       RETURNING id, name`,
-      [orgId, p.name, p.desc, p.client, p.owner, p.status, p.health, p.budget, p.start, p.end]
+    const existingProj = await pool.query(
+      'SELECT id FROM projects WHERE organization_id = $1 AND name = $2',
+      [orgId, p.name]
     );
-    projectMap[p.name] = res.rows[0].id;
+    if (existingProj.rows.length === 0) {
+      const res = await pool.query(
+        `INSERT INTO projects (
+           organization_id, name, description, client_id, owner_id, status, health, budget, start_date, end_date
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id, name`,
+        [orgId, p.name, p.desc, p.client, p.owner, p.status, p.health, p.budget, p.start, p.end]
+      );
+      projectMap[p.name] = res.rows[0].id;
+    } else {
+      projectMap[p.name] = existingProj.rows[0].id;
+    }
   }
 
-  // 6. Realistic Tasks (52 tasks across all departments, statuses, priorities)
-  const tasksData = [
-    // Overdue tasks
-    {
-      code: 'TASK-2026-0001',
-      title: 'Fix authentication session expiration',
-      desc: 'Address token refresh race condition and configure HttpOnly SameSite cookies.',
-      project: 'Client CRM Portal',
-      dept: 'Engineering',
-      status: 'in_progress',
-      priority: 'urgent',
-      due: '2026-10-24',
-      est: 12,
-      act: 8,
-      pct: 65,
-      tags: 'auth,security,cookies',
-      creator: userMap['Priya Verma'],
-      assignees: [userMap['Rahul Kumar'], userMap['Pooja Mehta']],
-    },
-    {
-      code: 'TASK-2026-0002',
-      title: 'Optimize PostgreSQL queries',
-      desc: 'Add compound indexes on task filter columns and eliminate N+1 query patterns.',
-      project: 'Client CRM Portal',
-      dept: 'Engineering',
-      status: 'blocked',
-      priority: 'high',
-      due: '2026-10-26',
-      est: 8,
-      act: 4,
-      pct: 40,
-      tags: 'database,performance,sql',
-      blocked: 'Waiting for staging execution plan from DBA',
-      creator: userMap['Aarav Sharma'],
-      assignees: [userMap['Pooja Mehta']],
-    },
-    {
-      code: 'TASK-2026-0003',
-      title: 'Resolve staging deployment failure',
-      desc: 'Fix docker build failure caused by upstream lightningcss dependency mismatch.',
-      project: 'Cloud Migration',
-      dept: 'DevOps and Cloud',
-      status: 'todo',
-      priority: 'urgent',
-      due: '2026-10-27',
-      est: 6,
-      act: 2,
-      pct: 20,
-      tags: 'devops,docker,ci-cd',
-      creator: userMap['Arjun Singh'],
-      assignees: [userMap['Aditya Joshi']],
-    },
-    // Due Today tasks (current date is 2026-10-28)
-    {
-      code: 'TASK-2026-0004',
-      title: 'Complete responsive dashboard layout',
-      desc: 'Ensure seamless tablet sidebar collapsing and mobile touch targets.',
-      project: 'Employee Dashboard',
-      dept: 'Web Development',
-      status: 'in_progress',
-      priority: 'high',
-      due: '2026-10-28',
-      est: 16,
-      act: 12,
-      pct: 80,
-      tags: 'frontend,responsive,ui',
-      creator: userMap['Sneha Gupta'],
-      assignees: [userMap['Ananya Das']],
-    },
-    {
-      code: 'TASK-2026-0005',
-      title: 'Review pull request for payment integration',
-      desc: 'Audit Razorpay webhook signature verification and idempotent charge handling.',
-      project: 'E-commerce Platform',
-      dept: 'Engineering',
-      status: 'in_review',
-      priority: 'urgent',
-      due: '2026-10-28',
-      est: 4,
-      act: 3,
-      pct: 90,
-      tags: 'payment,security,code-review',
-      creator: userMap['Priya Verma'],
-      assignees: [userMap['Rahul Kumar'], userMap['Amit Sinha']],
-    },
-    {
-      code: 'TASK-2026-0006',
-      title: 'Perform API security testing',
-      desc: 'Run OWASP ZAP automated scan against all authenticated CRM endpoints.',
-      project: 'Security Assessment',
-      dept: 'Cybersecurity',
-      status: 'in_progress',
-      priority: 'high',
-      due: '2026-10-28',
-      est: 10,
-      act: 7,
-      pct: 70,
-      tags: 'owasp,penetration-testing,api',
-      creator: userMap['Amit Sinha'],
-      assignees: [userMap['Amit Sinha']],
-    },
-    // Due soon (within 3 days: Oct 29 - Oct 31)
-    {
-      code: 'TASK-2026-0007',
-      title: 'Prepare client project status report',
-      desc: 'Compile sprint velocity, completed deliverables, and risks for Tata Consultancy.',
-      project: 'Corporate Website Revamp',
-      dept: 'Sales and Business Development',
-      status: 'todo',
-      priority: 'medium',
-      due: '2026-10-29',
-      est: 5,
-      act: 0,
-      pct: 0,
-      tags: 'client,reporting,status',
-      creator: userMap['Vivek Yadav'],
-      assignees: [userMap['Vivek Yadav'], userMap['Sneha Gupta']],
-    },
-    {
-      code: 'TASK-2026-0008',
-      title: 'Test employee task assignment permissions',
-      desc: 'Validate that Employees cannot reassign manager tasks or mutate audit logs.',
-      project: 'Client CRM Portal',
-      dept: 'QA and Testing',
-      status: 'in_progress',
-      priority: 'high',
-      due: '2026-10-30',
-      est: 8,
-      act: 5,
-      pct: 60,
-      tags: 'qa,rbac,permissions',
-      creator: userMap['Rohan Patel'],
-      assignees: [userMap['Shreya Iyer']],
-    },
-    {
-      code: 'TASK-2026-0009',
-      title: 'Improve application loading performance',
-      desc: 'Implement dynamic chunk splitting for heavy charting components.',
-      project: 'Employee Dashboard',
-      dept: 'Web Development',
-      status: 'todo',
-      priority: 'medium',
-      due: '2026-10-31',
-      est: 12,
-      act: 2,
-      pct: 15,
-      tags: 'performance,vite,bundling',
-      creator: userMap['Sneha Gupta'],
-      assignees: [userMap['Ananya Das']],
-    },
-    {
-      code: 'TASK-2026-0010',
-      title: 'Complete QA regression testing',
-      desc: 'Execute full Playwright E2E suite covering login, task creation, and status moves.',
-      project: 'Client CRM Portal',
-      dept: 'QA and Testing',
-      status: 'todo',
-      priority: 'high',
-      due: '2026-10-31',
-      est: 14,
-      act: 0,
-      pct: 0,
-      tags: 'qa,e2e,regression',
-      creator: userMap['Rohan Patel'],
-      assignees: [userMap['Shreya Iyer'], userMap['Rohan Patel']],
-    },
-    // Future tasks (Nov 2026)
-    {
-      code: 'TASK-2026-0011',
-      title: 'Setup Redis cluster for session caching',
-      desc: 'Configure AWS ElastiCache cluster with multi-AZ failover.',
-      project: 'Cloud Migration',
-      dept: 'DevOps and Cloud',
-      status: 'backlog',
-      priority: 'medium',
-      due: '2026-11-05',
-      est: 16,
-      act: 0,
-      pct: 0,
-      tags: 'redis,aws,cloud',
-      creator: userMap['Arjun Singh'],
-      assignees: [userMap['Aditya Joshi']],
-    },
-    {
-      code: 'TASK-2026-0012',
-      title: 'Design dark mode color tokens',
-      desc: 'Deliver accessible WCAG AAA compliant slate dark palette in Figma.',
-      project: 'Employee Dashboard',
-      dept: 'UI/UX Design',
-      status: 'in_progress',
-      priority: 'medium',
-      due: '2026-11-04',
-      est: 10,
-      act: 6,
-      pct: 60,
-      tags: 'design,dark-mode,accessibility',
-      creator: userMap['Neha Mishra'],
-      assignees: [userMap['Kavya Nair']],
-    },
-    {
-      code: 'TASK-2026-0013',
-      title: 'Implement biometric authentication in Mobile App',
-      desc: 'Integrate FaceID and TouchID credentials storage in React Native Keychain.',
-      project: 'Mobile App Release',
-      dept: 'Mobile Development',
-      status: 'todo',
-      priority: 'high',
-      due: '2026-11-12',
-      est: 20,
-      act: 0,
-      pct: 0,
-      tags: 'mobile,react-native,biometrics',
-      creator: userMap['Priya Verma'],
-      assignees: [userMap['Karan Malhotra']],
-    },
-    {
-      code: 'TASK-2026-0014',
-      title: 'Conduct Q4 employee performance reviews',
-      desc: 'Distribute feedback forms and coordinate manager 1-on-1 interviews.',
-      project: null,
-      dept: 'Human Resources',
-      status: 'in_progress',
-      priority: 'medium',
-      due: '2026-11-15',
-      est: 24,
-      act: 10,
-      pct: 40,
-      tags: 'hr,performance,reviews',
-      creator: userMap['Ritu Agarwal'],
-      assignees: [userMap['Ritu Agarwal']],
-    },
-    {
-      code: 'TASK-2026-0015',
-      title: 'Audit third-party npm dependencies for CVEs',
-      desc: 'Review npm audit results and replace unmaintained packages.',
-      project: 'Security Assessment',
-      dept: 'Cybersecurity',
-      status: 'todo',
-      priority: 'high',
-      due: '2026-11-06',
-      est: 6,
-      act: 0,
-      pct: 0,
-      tags: 'cve,audit,dependencies',
-      creator: userMap['Amit Sinha'],
-      assignees: [userMap['Amit Sinha']],
-    },
-    // Completed tasks
-    {
-      code: 'TASK-2026-0016',
-      title: 'Design initial TaskFlow database schema',
-      desc: 'Draft normalized PostgreSQL schema with organizations, users, and tasks.',
-      project: 'Client CRM Portal',
-      dept: 'Engineering',
-      status: 'done',
-      priority: 'high',
-      due: '2026-10-20',
-      est: 10,
-      act: 9,
-      pct: 100,
-      tags: 'database,schema,postgres',
-      creator: userMap['Aarav Sharma'],
-      assignees: [userMap['Pooja Mehta']],
-    },
-    {
-      code: 'TASK-2026-0017',
-      title: 'Setup Vite React 19 frontend foundation',
-      desc: 'Configure Vite build toolchain, Oxlint linter, and basic component directory.',
-      project: 'Employee Dashboard',
-      dept: 'Web Development',
-      status: 'done',
-      priority: 'medium',
-      due: '2026-10-22',
-      est: 8,
-      act: 7,
-      pct: 100,
-      tags: 'react,vite,toolchain',
-      creator: userMap['Sneha Gupta'],
-      assignees: [userMap['Ananya Das']],
-    },
-    {
-      code: 'TASK-2026-0018',
-      title: 'Provision AWS staging Kubernetes cluster',
-      desc: 'Deploy 3-node EKS cluster with managed VPC and ingress load balancer.',
-      project: 'Cloud Migration',
-      dept: 'DevOps and Cloud',
-      status: 'done',
-      priority: 'urgent',
-      due: '2026-10-21',
-      est: 16,
-      act: 15,
-      pct: 100,
-      tags: 'kubernetes,aws,eks',
-      creator: userMap['Arjun Singh'],
-      assignees: [userMap['Arjun Singh'], userMap['Aditya Joshi']],
-    },
-    {
-      code: 'TASK-2026-0019',
-      title: 'Create corporate brand guidelines and assets',
-      desc: 'Establish typography, color hierarchy, logo variants, and UI component badges.',
-      project: 'Corporate Website Revamp',
-      dept: 'UI/UX Design',
-      status: 'done',
-      priority: 'medium',
-      due: '2026-10-18',
-      est: 12,
-      act: 11,
-      pct: 100,
-      tags: 'branding,design,assets',
-      creator: userMap['Neha Mishra'],
-      assignees: [userMap['Kavya Nair']],
-    },
-    {
-      code: 'TASK-2026-0020',
-      title: 'Setup automated Slack notifications for customer tickets',
-      desc: 'Deploy webhook service to route urgent Zendesk tickets to support channel.',
-      project: null,
-      dept: 'Customer Support',
-      status: 'done',
-      priority: 'low',
-      due: '2026-10-23',
-      est: 4,
-      act: 3,
-      pct: 100,
-      tags: 'support,slack,automation',
-      creator: userMap['Manish Tiwari'],
-      assignees: [userMap['Manish Tiwari']],
-    },
-  ];
+  // 6. Check existing tasks to guarantee idempotency
+  const existingTasksRes = await pool.query('SELECT COUNT(*) FROM tasks WHERE organization_id = $1', [orgId]);
+  const taskCount = parseInt(existingTasksRes.rows[0].count, 10);
 
-  // Generate additional tasks up to 52 tasks total for comprehensive realistic volume
-  const extraTaskTemplates = [
-    { title: 'Refactor state management in dashboard filters', dept: 'Web Development', project: 'Employee Dashboard', priority: 'medium', status: 'in_progress', est: 8, pct: 45, tags: 'react,state' },
-    { title: 'Integrate Indian GST tax calculations into checkout', dept: 'Engineering', project: 'E-commerce Platform', priority: 'high', status: 'todo', est: 12, pct: 0, tags: 'gst,finance' },
-    { title: 'Create automated email notification templates', dept: 'Web Development', project: 'Client CRM Portal', priority: 'low', status: 'backlog', est: 6, pct: 0, tags: 'email,templates' },
-    { title: 'Run cross-browser compatibility tests on Safari & Firefox', dept: 'QA and Testing', project: 'Corporate Website Revamp', priority: 'medium', status: 'in_progress', est: 8, pct: 50, tags: 'testing,browser' },
-    { title: 'Configure GitHub Actions CI/CD matrix build for Node 22 and 24', dept: 'DevOps and Cloud', project: 'Cloud Migration', priority: 'medium', status: 'done', est: 5, pct: 100, tags: 'ci-cd,github' },
-    { title: 'Implement rate limiting on public contact form', dept: 'Cybersecurity', project: 'Corporate Website Revamp', priority: 'high', status: 'done', est: 4, pct: 100, tags: 'security,rate-limit' },
-    { title: 'Publish Diwali promotional campaign landing page', dept: 'Digital Marketing', project: 'Corporate Website Revamp', priority: 'urgent', status: 'in_review', est: 14, pct: 90, tags: 'marketing,campaign' },
-    { title: 'Build export tasks to CSV and PDF report generator', dept: 'Engineering', project: 'Employee Dashboard', priority: 'high', status: 'done', est: 10, pct: 100, tags: 'reports,csv' },
-    { title: 'Draft onboarding documentation for new engineering hires', dept: 'Human Resources', project: null, priority: 'low', status: 'done', est: 8, pct: 100, tags: 'hr,onboarding' },
-    { title: 'Optimize mobile checkout funnel conversion metrics', dept: 'Mobile Development', project: 'E-commerce Platform', priority: 'high', status: 'in_progress', est: 16, pct: 35, tags: 'mobile,ux' },
-    { title: 'Implement WebSocket live notifications connection', dept: 'Engineering', project: 'Client CRM Portal', priority: 'medium', status: 'backlog', est: 18, pct: 0, tags: 'realtime,websocket' },
-    { title: 'Configure Cloudflare WAF bot management rules', dept: 'Cybersecurity', project: 'E-commerce Platform', priority: 'high', status: 'done', est: 6, pct: 100, tags: 'security,cloudflare' },
-    { title: 'Conduct quarterly load test simulating 50,000 concurrent users', dept: 'QA and Testing', project: 'E-commerce Platform', priority: 'urgent', status: 'in_review', est: 20, pct: 85, tags: 'k6,load-test' },
-    { title: 'Add kanban board drag and drop accessibility keyboard support', dept: 'UI/UX Design', project: 'Employee Dashboard', priority: 'medium', status: 'in_progress', est: 9, pct: 60, tags: 'a11y,kanban' },
-    { title: 'Set up Prometheus and Grafana dashboards for Kubernetes cluster', dept: 'DevOps and Cloud', project: 'Cloud Migration', priority: 'high', status: 'done', est: 14, pct: 100, tags: 'monitoring,grafana' },
-    { title: 'Customer feedback survey analysis for Q3 release', dept: 'Customer Support', project: null, priority: 'low', status: 'done', est: 6, pct: 100, tags: 'support,feedback' },
-    { title: 'Implement multi-tenant database connection pooling', dept: 'Engineering', project: 'Client CRM Portal', priority: 'urgent', status: 'done', est: 12, pct: 100, tags: 'postgres,pgpool' },
-    { title: 'Review legal terms and NDAs for Infosys partnership', dept: 'Sales and Business Development', project: null, priority: 'high', status: 'done', est: 4, pct: 100, tags: 'legal,sales' },
-    { title: 'Mobile push notification deep-linking support', dept: 'Mobile Development', project: 'Mobile App Release', priority: 'medium', status: 'todo', est: 12, pct: 10, tags: 'mobile,deeplink' },
-    { title: 'Add breadcrumb navigation and accessible skip links', dept: 'Web Development', project: 'Employee Dashboard', priority: 'low', status: 'done', est: 4, pct: 100, tags: 'a11y,ui' },
-    { title: 'Verify SSL certificate automatic renewal with Let\'s Encrypt', dept: 'DevOps and Cloud', project: 'Cloud Migration', priority: 'medium', status: 'done', est: 3, pct: 100, tags: 'ssl,certbot' },
-    { title: 'Create interactive client CRM pipeline dashboard view', dept: 'Engineering', project: 'Client CRM Portal', priority: 'high', status: 'in_progress', est: 14, pct: 75, tags: 'crm,sales' },
-    { title: 'Benchmark Node.js 24 V8 performance with native scrypt hashing', dept: 'Engineering', project: 'Client CRM Portal', priority: 'low', status: 'done', est: 6, pct: 100, tags: 'node,scrypt' },
-    { title: 'Conduct quarterly internal phishing simulation exercise', dept: 'Cybersecurity', project: 'Security Assessment', priority: 'medium', status: 'done', est: 8, pct: 100, tags: 'security,training' },
-    { title: 'Implement search debouncing and keyboard shortcut Ctrl+K', dept: 'Web Development', project: 'Employee Dashboard', priority: 'medium', status: 'done', est: 5, pct: 100, tags: 'ui,shortcuts' },
-    { title: 'Produce video walkthrough for Aulten TaskFlow employee portal', dept: 'Digital Marketing', project: 'Corporate Website Revamp', priority: 'low', status: 'todo', est: 16, pct: 0, tags: 'video,marketing' },
-    { title: 'Update HR policy document regarding remote work equipment allowance', dept: 'Human Resources', project: null, priority: 'low', status: 'done', est: 4, pct: 100, tags: 'hr,policy' },
-    { title: 'Implement automated task priority scoring algorithm', dept: 'Engineering', project: 'Employee Dashboard', priority: 'high', status: 'done', est: 8, pct: 100, tags: 'algorithm,priority' },
-    { title: 'Clean up orphaned task assignments and foreign key cascades', dept: 'Engineering', project: 'Client CRM Portal', priority: 'medium', status: 'done', est: 4, pct: 100, tags: 'sql,cleanup' },
-    { title: 'Conduct user acceptance testing (UAT) session with department heads', dept: 'QA and Testing', project: 'Employee Dashboard', priority: 'high', status: 'in_review', est: 10, pct: 90, tags: 'uat,qa' },
-    { title: 'Create responsive SVG icon library for TaskFlow branding', dept: 'UI/UX Design', project: 'Corporate Website Revamp', priority: 'low', status: 'done', est: 7, pct: 100, tags: 'svg,design' },
-    { title: 'Prepare production deployment runbook and rollback plan', dept: 'DevOps and Cloud', project: 'Cloud Migration', priority: 'urgent', status: 'done', est: 8, pct: 100, tags: 'deployment,runbook' },
-  ];
+  if (taskCount === 0) {
+    // 52 Realistic Manufacturing Work Orders
+    const manufacturingTasks = [
+      // Overdue tasks (relative to 2026-10-28)
+      {
+        code: 'TASK-2026-0001',
+        title: 'Batch #849 Titanium Alloy Tensile Strength & Charpy Testing',
+        desc: 'Sample 6 specimen test coupons from raw titanium billet heat #TI-904. Certify yield strength (>880 MPa) and Charpy impact energy.',
+        project: 'Project Trishul: Defense Aerospace Hydraulic Manifolds',
+        dept: 'Metallurgy & Materials Testing Lab',
+        status: 'in_progress',
+        priority: 'urgent',
+        due: '2026-10-26', // 2 days overdue
+        est: 8,
+        act: 6,
+        pct: 75,
+        tags: 'metallurgy,tensile,testing,as9100d',
+        creator: userMap['Aarav Sharma'],
+        assignees: [userMap['Rahul Kumar'], userMap['Pooja Mehta']],
+      },
+      {
+        code: 'TASK-2026-0002',
+        title: 'Root-Cause Analysis of Micro-Porosity in Die Casting Batch #912',
+        desc: 'Investigate molten aluminum degassing duration, mold vacuum evacuation pressure, and chill-vent blockages.',
+        project: 'Project Garuda: EV Powertrain Casings',
+        dept: 'Die Stamping & Forging',
+        status: 'blocked',
+        priority: 'high',
+        due: '2026-10-27', // 1 day overdue
+        est: 8,
+        act: 4,
+        pct: 40,
+        tags: 'diecasting,porosity,metallurgy,automotive',
+        blocked: 'Awaiting molten metal spectrometer gas analysis from Lab',
+        creator: userMap['Rajesh Kumar'],
+        assignees: [userMap['Pooja Mehta']],
+      },
+      {
+        code: 'TASK-2026-0003',
+        title: 'Emergency: Laser curtain interlock fault on Automated Blanking Cell',
+        desc: 'Fix optical alignment sensor fault causing intermittent trips on Stamping Line 2 safety relay.',
+        project: 'Project Raksha: ISO 45001 EHS Zero-Harm Shopfloor Program',
+        dept: 'Environment, Health & Safety (EHS)',
+        status: 'todo',
+        priority: 'urgent',
+        due: '2026-10-27', // 1 day overdue
+        est: 6,
+        act: 2,
+        pct: 20,
+        tags: 'safety,interlock,ehs,zero-harm',
+        creator: userMap['Pooja Mehta'],
+        assignees: [userMap['Pooja Mehta']],
+      },
+      // Due Today tasks (2026-10-28)
+      {
+        code: 'TASK-2026-0004',
+        title: 'Calibrate 5-Axis CNC Milling Unit #4 (Tolerance < 0.005mm)',
+        desc: 'Perform laser interferometer volumetric positioning calibration and spindle concentricity check on Mazak 5-axis center.',
+        project: 'Project Trishul: Defense Aerospace Hydraulic Manifolds',
+        dept: 'CNC Machining & Tooling',
+        status: 'in_progress',
+        priority: 'urgent',
+        due: '2026-10-28', // due today
+        est: 6,
+        act: 4,
+        pct: 60,
+        tags: 'cnc,metrology,tolerance,defense',
+        creator: userMap['Vikram Malhotra'],
+        assignees: [userMap['Rahul Kumar']],
+      },
+      {
+        code: 'TASK-2026-0005',
+        title: 'Shop Floor Bay 3 Robotic MIG Welding Kinematic Recalibration',
+        desc: 'Re-zero 6-axis KUKA welding robot tool center point. Verify wire feed speed and argon/CO2 shielding gas flow rate.',
+        project: 'Project Garuda: EV Powertrain Casings',
+        dept: 'Assembly & Heavy Fabrication',
+        status: 'in_progress',
+        priority: 'high',
+        due: '2026-10-28', // due today
+        est: 5,
+        act: 3,
+        pct: 50,
+        tags: 'robotics,welding,automation,assembly',
+        creator: userMap['Rajesh Kumar'],
+        assignees: [userMap['Amit Patel']],
+      },
+      {
+        code: 'TASK-2026-0006',
+        title: 'Final Quality Release & VCI Packaging for Tata Motors Gearboxes',
+        desc: 'Inspect 450 finished planetary gearbox housings, verify thread gauges, apply Cortec VCI film wrapping, and package in export skids.',
+        project: 'Project Garuda: EV Powertrain Casings',
+        dept: 'Dispatch & Finished Goods Logistics',
+        status: 'todo',
+        priority: 'urgent',
+        due: '2026-10-28', // due today
+        est: 6,
+        act: 0,
+        pct: 0,
+        tags: 'dispatch,tatamotors,packaging,vci',
+        creator: userMap['Rajesh Kumar'],
+        assignees: [userMap['Meera Nambiar']],
+      },
+      {
+        code: 'TASK-2026-0007',
+        title: 'Pre-Delivery Inspection (PDI) for Mahindra High-Torque PTO Shafts',
+        desc: 'Perform 100% torque endurance testing up to 2,400 Nm on dynamometer bench and inspect spline hardness across 120 tractor drive shafts.',
+        project: 'Project Surya: Solar Heavy Tracker Gearbox Assembly',
+        dept: 'Assembly & Heavy Fabrication',
+        status: 'in_progress',
+        priority: 'high',
+        due: '2026-10-28', // due today
+        est: 7,
+        act: 5,
+        pct: 70,
+        tags: 'pdi,mahindra,torquetest,assembly',
+        creator: userMap['Rajesh Kumar'],
+        assignees: [userMap['Kavya Nair']],
+      },
+      {
+        code: 'TASK-2026-0008',
+        title: 'Coordinate CMM Scan for Godrej Aerospace Rocket Thrust Injector',
+        desc: 'Measure 96 orifice nozzle concentricities and pitch angles using 0.5mm ruby probe on Zeiss CMM. Generate GD&T geometric report.',
+        project: 'Project Trishul: Defense Aerospace Hydraulic Manifolds',
+        dept: 'Quality Assurance & ISO 9001',
+        status: 'in_progress',
+        priority: 'urgent',
+        due: '2026-10-28', // due today
+        est: 8,
+        act: 6,
+        pct: 75,
+        tags: 'aerospace,cmm,godrej,precision',
+        creator: userMap['Priya Verma'],
+        assignees: [userMap['Deepak Chauhan']],
+      },
+      // Due Tomorrow tasks (2026-10-29)
+      {
+        code: 'TASK-2026-0009',
+        title: 'Overhaul 1,200-Ton Hydraulic Stamping Press Main Ram Seals',
+        desc: 'Inspect hydraulic valve manifolds, replace dual polyurethane piston rod seals, bleed air, and conduct pressure holding test at 315 bar.',
+        project: 'Project Chetna: Stamping Line 4 IoT SCADA Modernization',
+        dept: 'Preventive Maintenance & Reliability',
+        status: 'todo',
+        priority: 'urgent',
+        due: '2026-10-29', // due tomorrow
+        est: 12,
+        act: 0,
+        pct: 0,
+        tags: 'maintenance,hydraulic,highpressure,stamping',
+        creator: userMap['Arjun Singh'],
+        assignees: [userMap['Suresh Nair']],
+      },
+      {
+        code: 'TASK-2026-0010',
+        title: 'Calibrate Optical Coordinate Measuring Machine (CMM) Reference Spheres',
+        desc: 'Verify Zeiss Accura CMM ceramic reference sphere diameters using certified UKAS ruby stylus probes in climate-controlled metrology lab.',
+        project: 'Project Trishul: Defense Aerospace Hydraulic Manifolds',
+        dept: 'Quality Assurance & ISO 9001',
+        status: 'todo',
+        priority: 'medium',
+        due: '2026-10-29',
+        est: 4,
+        act: 0,
+        pct: 0,
+        tags: 'metrology,cmm,zeiss,calibration',
+        creator: userMap['Priya Verma'],
+        assignees: [userMap['Deepak Chauhan']],
+      },
+      {
+        code: 'TASK-2026-0011',
+        title: 'Replace Nitrogen Gas Accumulator Bladder on 800T Die Casting Machine',
+        desc: 'Depressurize accumulator cylinder, replace nitrile synthetic rubber bladder, pre-charge with dry nitrogen to 120 bar, and check safety valve.',
+        project: 'Project Garuda: EV Powertrain Casings',
+        dept: 'Preventive Maintenance & Reliability',
+        status: 'todo',
+        priority: 'high',
+        due: '2026-10-29',
+        est: 6,
+        act: 0,
+        pct: 0,
+        tags: 'maintenance,accumulator,nitrogen,diecasting',
+        creator: userMap['Aarav Sharma'],
+        assignees: [userMap['Suresh Nair']],
+      },
+      {
+        code: 'TASK-2026-0012',
+        title: 'Stage-4 Ultrasonic NDT Flaw Inspection on BHEL Flanges',
+        desc: 'Conduct phased-array ultrasonic testing (PAUT) across weld preps and forged faces of 24-inch steam turbine nozzle flanges.',
+        project: 'Project Vayu: High-Pressure Steam Turbine Blading',
+        dept: 'Metallurgy & Materials Testing Lab',
+        status: 'in_review',
+        priority: 'high',
+        due: '2026-10-30',
+        est: 7,
+        act: 6,
+        pct: 85,
+        tags: 'ndt,ultrasonic,bhel,quality',
+        creator: userMap['Priya Verma'],
+        assignees: [userMap['Sunita Rao']],
+      },
+      {
+        code: 'TASK-2026-0013',
+        title: 'ISO 9001:2015 Annual Surveillance Audit Documentation Closure',
+        desc: 'Collate calibration records, non-conformance reports (NCRs), and customer feedback log for external Bureau Veritas audit team.',
+        project: 'Project Raksha: ISO 45001 EHS Zero-Harm Shopfloor Program',
+        dept: 'Quality Assurance & ISO 9001',
+        status: 'in_review',
+        priority: 'urgent',
+        due: '2026-10-31',
+        est: 10,
+        act: 8,
+        pct: 80,
+        tags: 'iso9001,quality,audit,compliance',
+        creator: userMap['Aarav Sharma'],
+        assignees: [userMap['Priya Verma']],
+      },
+      {
+        code: 'TASK-2026-0014',
+        title: 'Wire-EDM Profiling of Inconel Turbine Aerofoil Serrated Root Blading',
+        desc: 'Execute AgieCharmilles wire electrical discharge machining on fir-tree blade roots with spark gap stability monitoring in deionized water bath.',
+        project: 'Project Vayu: High-Pressure Steam Turbine Blading',
+        dept: 'CNC Machining & Tooling',
+        status: 'in_progress',
+        priority: 'high',
+        due: '2026-10-31',
+        est: 11,
+        act: 5,
+        pct: 45,
+        tags: 'wireedm,inconel718,aerospace,firtree',
+        creator: userMap['Vikram Malhotra'],
+        assignees: [userMap['Rahul Kumar']],
+      },
+      {
+        code: 'TASK-2026-0015',
+        title: 'Replace Spindle Bearings on Makino Horizontal Machining Center #2',
+        desc: 'Disassemble HMC-2 spindle cartridge, install matched hybrid ceramic angular contact bearing set, balance to ISO G0.4 spec at 18,000 RPM.',
+        project: 'Project Trishul: Defense Aerospace Hydraulic Manifolds',
+        dept: 'CNC Machining & Tooling',
+        status: 'blocked',
+        priority: 'high',
+        due: '2026-11-02',
+        est: 14,
+        act: 3,
+        pct: 20,
+        tags: 'cnc,spindle,bearings,tooling',
+        blocked: 'Awaiting SKF precision ceramic angular bearings shipment',
+        creator: userMap['Vikram Malhotra'],
+        assignees: [userMap['Vikram Malhotra']],
+      },
+      {
+        code: 'TASK-2026-0016',
+        title: 'Automate Tool Wear Warning System via Shopfloor Edge IoT Node',
+        desc: 'Configure spindle load feedback algorithms on Edge IoT gateway to trigger automatic tool change when cutting torque rises by >18%.',
+        project: 'Project Chetna: Stamping Line 4 IoT SCADA Modernization',
+        dept: 'Industrial Automation & SCADA',
+        status: 'in_progress',
+        priority: 'medium',
+        due: '2026-11-04',
+        est: 9,
+        act: 4,
+        pct: 45,
+        tags: 'automation,iot,scada,predictive',
+        creator: userMap['Arjun Singh'],
+        assignees: [userMap['Arjun Singh']],
+      },
+      {
+        code: 'TASK-2026-0017',
+        title: 'Procure Grade 316L Stainless Steel Sheet Stock for Cryogenic Vessels',
+        desc: 'Issue purchase requisition for 45 metric tons of ASME SA-240 Type 316L cold-rolled coil with dual certification and ferrite test reports.',
+        project: 'Project Vayu: High-Pressure Steam Turbine Blading',
+        dept: 'Supply Chain & Steel Sourcing',
+        status: 'todo',
+        priority: 'medium',
+        due: '2026-11-05',
+        est: 6,
+        act: 0,
+        pct: 0,
+        tags: 'procurement,stainlesssteel,rawmaterials',
+        creator: userMap['Aarav Sharma'],
+        assignees: [userMap['Ananya Iyer']],
+      },
+      {
+        code: 'TASK-2026-0018',
+        title: 'Setup Automated Vision Inspection for Stamped Bracket Line',
+        desc: 'Mount Cognex In-Sight 2D smart camera over conveyor belt 4. Program deep learning classifier to spot punch hole misalignments and burrs.',
+        project: 'Project Chetna: Stamping Line 4 IoT SCADA Modernization',
+        dept: 'Industrial Automation & SCADA',
+        status: 'in_progress',
+        priority: 'medium',
+        due: '2026-11-06',
+        est: 8,
+        act: 3,
+        pct: 35,
+        tags: 'machinevision,automation,ai,quality',
+        creator: userMap['Arjun Singh'],
+        assignees: [userMap['Arjun Singh']],
+      },
+      {
+        code: 'TASK-2026-0019',
+        title: 'Vendor Quality Audit: Bharat Forgings Sub-Tier Machined Blanks',
+        desc: 'On-site QA audit of Bharat Forgings facility in Chakan. Audit heat treatment furnaces, quench oil temperatures, and hardness calibration logs.',
+        project: 'Project Garuda: EV Powertrain Casings',
+        dept: 'Quality Assurance & ISO 9001',
+        status: 'todo',
+        priority: 'medium',
+        due: '2026-11-08',
+        est: 8,
+        act: 0,
+        pct: 0,
+        tags: 'vendoraudit,iatf16949,forgings,quality',
+        creator: userMap['Priya Verma'],
+        assignees: [userMap['Priya Verma']],
+      },
+      {
+        code: 'TASK-2026-0020',
+        title: 'Apprentice CNC Machinist Skill Certification & Safety Assessment',
+        desc: 'Conduct hands-on assessment of 14 apprentice machinists on emergency stop drills, chip clearance safety, and micrometer accuracy.',
+        project: 'Project Kaizen: Lean 5S & OEE 88% Throughput Target',
+        dept: 'Plant HR & Workforce Governance',
+        status: 'todo',
+        priority: 'low',
+        due: '2026-11-10',
+        est: 8,
+        act: 0,
+        pct: 0,
+        tags: 'hr,apprenticeship,safetytraining,skills',
+        creator: userMap['Ritu Agarwal'],
+        assignees: [userMap['Ritu Agarwal']],
+      },
+    ];
 
-  let taskCounter = 21;
-  for (const tpl of extraTaskTemplates) {
-    const code = `TASK-2026-${String(taskCounter).padStart(4, '0')}`;
-    const daysOffset = (taskCounter % 15) - 5;
-    const dueDate = new Date(Date.now() + daysOffset * 86400000).toISOString().split('T')[0];
+    // Add additional tasks up to 52 tasks
+    const extraTasks = [
+      { title: 'Reconcile Raw Material Inventory: 180T EN24 Steel Billets', dept: 'Supply Chain & Steel Sourcing', status: 'done', priority: 'medium', due: '2026-10-27', tags: 'inventory,steel,scm', creator: userMap['Aarav Sharma'], assignees: [userMap['Ananya Iyer']] },
+      { title: 'Thermal Imaging & Hotspot Scan on 33kV Main Substation Transformers', dept: 'Preventive Maintenance & Reliability', status: 'done', priority: 'medium', due: '2026-10-25', tags: 'electrical,thermography,maintenance', creator: userMap['Arjun Singh'], assignees: [userMap['Suresh Nair']] },
+      { title: 'Execute Emergency EHS Toxic Vapor & Gas Sensor Calibration in Forging Bay', dept: 'Environment, Health & Safety (EHS)', status: 'done', priority: 'urgent', due: '2026-10-24', tags: 'ehs,safety,sensors', creator: userMap['Aarav Sharma'], assignees: [userMap['Pooja Mehta']] },
+      { title: 'Verify Laser Safety Guard Interlocks on Automated Stamping Line 2', dept: 'Environment, Health & Safety (EHS)', status: 'done', priority: 'urgent', due: '2026-10-23', tags: 'ehs,safety,interlock', creator: userMap['Pooja Mehta'], assignees: [userMap['Pooja Mehta']] },
+      { title: 'Spectrographic Heat Analysis on Inbound 20MnCr5 Forging Bars', dept: 'Metallurgy & Materials Testing Lab', status: 'done', priority: 'high', due: '2026-10-25', tags: 'spectrometry,metallurgy,chemistry', creator: userMap['Sneha Gupta'], assignees: [userMap['Sneha Gupta']] },
+      { title: 'Conduct Air Permeability & Oil Leak Test on Suspension Hubs', dept: 'Assembly & Heavy Fabrication', status: 'done', priority: 'high', due: '2026-10-24', tags: 'leaktesting,quality,assembly', creator: userMap['Rajesh Kumar'], assignees: [userMap['Kavya Nair']] },
+      { title: 'Recalibrate Multi-Point Torque Guns for EV Battery Pack Frame Assembly', dept: 'Assembly & Heavy Fabrication', status: 'done', priority: 'high', due: '2026-10-27', tags: 'torque,assembly,calibration', creator: userMap['Rajesh Kumar'], assignees: [userMap['Amit Patel']] },
+      { title: 'Vibration FFT Spectrum Analysis on Stamping Hydraulic Feed Pump #3', dept: 'Preventive Maintenance & Reliability', status: 'done', priority: 'medium', due: '2026-10-26', tags: 'vibration,fft,maintenance', creator: userMap['Arjun Singh'], assignees: [userMap['Suresh Nair']] },
+      { title: 'Conduct Shift A vs Shift B Stamping Defect Pareto Analysis', dept: 'Plant Operations & Production', status: 'in_progress', priority: 'medium', due: '2026-10-30', tags: 'kaizen,lean,pareto', creator: userMap['Rajesh Kumar'], assignees: [userMap['Rohan Joshi']] },
+      { title: 'Lean 5S Shop Floor Standardization Audit in Machining Cell B', dept: 'Plant Operations & Production', status: 'in_progress', priority: 'low', due: '2026-11-03', tags: 'lean,5s,standardization', creator: userMap['Rajesh Kumar'], assignees: [userMap['Rohan Joshi']] },
+      { title: 'Environmental Wet Scrubber Dust Collector Efficiency Overhaul', dept: 'Environment, Health & Safety (EHS)', status: 'in_progress', priority: 'medium', due: '2026-11-04', tags: 'ehs,environmental,scrubber', creator: userMap['Pooja Mehta'], assignees: [userMap['Pooja Mehta']] },
+      { title: 'Stamping Die Progressive Shear Edge Resharpening for Automotive Brackets', dept: 'Die Stamping & Forging', status: 'todo', priority: 'medium', due: '2026-10-31', tags: 'stamping,die,maintenance', creator: userMap['Manoj Deshmukh'], assignees: [userMap['Manoj Deshmukh']] },
+      { title: 'Calibrate Laser Tracker for L&T Nuclear Nozzle Flange Alignment', dept: 'Quality Assurance & ISO 9001', status: 'todo', priority: 'urgent', due: '2026-10-29', tags: 'nuclear,lasertracker,metrology', creator: userMap['Priya Verma'], assignees: [userMap['Deepak Chauhan']] },
+      { title: 'Re-zero Tool Center Point on Robotic Plasma Cutting Gantry #1', dept: 'Assembly & Heavy Fabrication', status: 'in_progress', priority: 'high', due: '2026-11-01', tags: 'robotics,plasma,cutting', creator: userMap['Rajesh Kumar'], assignees: [userMap['Amit Patel']] },
+      { title: 'Hardness Profiling across Induction Hardened Pinion Gear Teeth', dept: 'Metallurgy & Materials Testing Lab', status: 'todo', priority: 'medium', due: '2026-11-07', tags: 'metallurgy,hardness,gears', creator: userMap['Sneha Gupta'], assignees: [userMap['Sunita Rao']] },
+      { title: 'Inspect Hydraulic Manifold Block O-Ring Sealing Surfaces', dept: 'Preventive Maintenance & Reliability', status: 'todo', priority: 'low', due: '2026-11-09', tags: 'hydraulic,seals,maintenance', creator: userMap['Vikram Malhotra'], assignees: [userMap['Suresh Nair']] },
+      { title: 'Safety Walkthrough: Hot Forging Press Noise Decibel Assessment', dept: 'Environment, Health & Safety (EHS)', status: 'done', priority: 'medium', due: '2026-10-26', tags: 'safety,noise,ehs', creator: userMap['Pooja Mehta'], assignees: [userMap['Pooja Mehta']] },
+      { title: 'Implement Kanban Visual Bins for High-Speed Carbide Endmills', dept: 'CNC Machining & Tooling', status: 'in_progress', priority: 'low', due: '2026-11-08', tags: 'kanban,tooling,carbide', creator: userMap['Vikram Malhotra'], assignees: [userMap['Rahul Kumar']] },
+      { title: 'Surface Roughness Ra Verification on Aerospace Turbine Shafts', dept: 'Quality Assurance & ISO 9001', status: 'in_review', priority: 'high', due: '2026-11-01', tags: 'quality,roughness,aerospace', creator: userMap['Priya Verma'], assignees: [userMap['Deepak Chauhan']] },
+      { title: 'Verify Fire Hydrant Water Ring Pressure across All 3 Shopfloors', dept: 'Environment, Health & Safety (EHS)', status: 'done', priority: 'urgent', due: '2026-10-25', tags: 'safety,firehydrant,ehs', creator: userMap['Pooja Mehta'], assignees: [userMap['Pooja Mehta']] },
+      { title: 'Setup High-Torque Nutrunner Controller Preset Profiles for Axles', dept: 'Assembly & Heavy Fabrication', status: 'todo', priority: 'medium', due: '2026-11-05', tags: 'assembly,nutrunner,torque', creator: userMap['Rajesh Kumar'], assignees: [userMap['Kavya Nair']] },
+      { title: 'Cooling Tower Water Bio-Biocide Chemical Dosing & PH Balance Check', dept: 'Preventive Maintenance & Reliability', status: 'done', priority: 'low', due: '2026-10-26', tags: 'facility,coolingwater,maintenance', creator: userMap['Arjun Singh'], assignees: [userMap['Suresh Nair']] },
+      { title: 'Validate Material Traceability Barcode Scanners in Raw Yard', dept: 'Supply Chain & Steel Sourcing', status: 'in_progress', priority: 'medium', due: '2026-11-03', tags: 'barcode,traceability,scm', creator: userMap['Ananya Iyer'], assignees: [userMap['Ananya Iyer']] },
+      { title: 'Overhaul Hydraulic Proportioning Valves on Cold Extrusion Press #1', dept: 'Preventive Maintenance & Reliability', status: 'todo', priority: 'high', due: '2026-11-06', tags: 'hydraulic,extrusion,valves', creator: userMap['Aarav Sharma'], assignees: [userMap['Suresh Nair']] },
+      { title: 'Annual Renewal of ISO 45001 Occupational Safety Accreditation', dept: 'Environment, Health & Safety (EHS)', status: 'in_review', priority: 'urgent', due: '2026-11-12', tags: 'iso45001,safety,certification', creator: userMap['Aarav Sharma'], assignees: [userMap['Pooja Mehta']] },
+      { title: 'Pre-Shipment Rust Inhibitor Oil Immersion for Export Camshafts', dept: 'Dispatch & Finished Goods Logistics', status: 'in_progress', priority: 'medium', due: '2026-10-31', tags: 'dispatch,rustinhibitor,export', creator: userMap['Rajesh Kumar'], assignees: [userMap['Meera Nambiar']] },
+      { title: 'Precision Broaching Tool Sharpening for Internal Spline Hubs', dept: 'CNC Machining & Tooling', status: 'done', priority: 'high', due: '2026-10-24', tags: 'tooling,broaching,splines', creator: userMap['Vikram Malhotra'], assignees: [userMap['Rahul Kumar']] },
+      { title: 'Quarterly Air Compressor Dew Point & Desiccant Dryer Inspection', dept: 'Preventive Maintenance & Reliability', status: 'done', priority: 'low', due: '2026-10-27', tags: 'compressor,dewpoint,maintenance', creator: userMap['Arjun Singh'], assignees: [userMap['Suresh Nair']] },
+      { title: 'Conduct Ergonomic Posture Assessment for Assembly Station 3', dept: 'Plant HR & Workforce Governance', status: 'in_progress', priority: 'low', due: '2026-11-08', tags: 'ergonomics,hr,safety', creator: userMap['Ritu Agarwal'], assignees: [userMap['Ritu Agarwal']] },
+      { title: 'Evaluate Scrap Recovery Value for Titanium Turnings & Swarf', dept: 'Supply Chain & Steel Sourcing', status: 'todo', priority: 'medium', due: '2026-11-14', tags: 'scrap,recycling,titanium', creator: userMap['Ananya Iyer'], assignees: [userMap['Ananya Iyer']] },
+      { title: 'Microscopic Grain Size & Inclusion Rating on ASTM A182 Forgings', dept: 'Metallurgy & Materials Testing Lab', status: 'in_review', priority: 'high', due: '2026-10-30', tags: 'metallurgy,microscopy,grainsize', creator: userMap['Sneha Gupta'], assignees: [userMap['Sunita Rao']] },
+      { title: 'Update Shift Worker Digital Attendance & Overtime SCADA Terminal', dept: 'Plant HR & Workforce Governance', status: 'done', priority: 'medium', due: '2026-10-27', tags: 'attendance,hr,workforce', creator: userMap['Ritu Agarwal'], assignees: [userMap['Ritu Agarwal']] },
+    ];
 
-    tasksData.push({
-      code,
-      title: tpl.title,
-      desc: `${tpl.title} for Aulten Digital internal workflow.`,
-      project: tpl.project,
-      dept: tpl.dept,
-      status: tpl.status,
-      priority: tpl.priority,
-      due: dueDate,
-      est: tpl.est,
-      act: Math.round(tpl.est * (tpl.pct / 100)),
-      pct: tpl.pct,
-      tags: tpl.tags,
-      creator: userMap['Aarav Sharma'],
-      assignees: [
-        tpl.dept === 'Engineering' ? userMap['Rahul Kumar'] :
-        tpl.dept === 'Web Development' ? userMap['Ananya Das'] :
-        tpl.dept === 'QA and Testing' ? userMap['Shreya Iyer'] :
-        tpl.dept === 'DevOps and Cloud' ? userMap['Aditya Joshi'] :
-        tpl.dept === 'UI/UX Design' ? userMap['Kavya Nair'] :
-        tpl.dept === 'Cybersecurity' ? userMap['Amit Sinha'] :
-        tpl.dept === 'Mobile Development' ? userMap['Karan Malhotra'] :
-        tpl.dept === 'Digital Marketing' ? userMap['Divya Pillai'] :
-        tpl.dept === 'Customer Support' ? userMap['Manish Tiwari'] :
-        userMap['Priya Verma'],
-      ],
-    });
-    taskCounter++;
-  }
+    let taskCounter = 21;
+    for (const extra of extraTasks) {
+      const code = `TASK-2026-${String(taskCounter++).padStart(4, '0')}`;
+      manufacturingTasks.push({
+        code,
+        title: extra.title,
+        desc: extra.title + ' in strict accordance with engineering tolerances and QA standards.',
+        project: 'Project Kaizen: Lean 5S & OEE 88% Throughput Target',
+        dept: extra.dept,
+        status: extra.status,
+        priority: extra.priority,
+        due: extra.due,
+        est: 6,
+        act: extra.status === 'done' ? 6 : 2,
+        pct: extra.status === 'done' ? 100 : 30,
+        tags: extra.tags,
+        creator: extra.creator,
+        assignees: extra.assignees,
+      });
+    }
 
-  // Insert tasks & assignments
-  for (const task of tasksData) {
-    const projId = task.project ? projectMap[task.project] : null;
-    const deptId = task.dept ? deptMap[task.dept] : null;
-    const coreStatus = task.status === 'done' ? 'completed' : (task.status === 'in_progress' ? 'in-progress' : 'pending');
-    const corePriority = task.priority === 'urgent' ? 'high' : task.priority;
-    const completedAt = task.status === 'done' ? new Date(Date.now() - 2 * 86400000) : null;
+    // Insert all tasks
+    for (const task of manufacturingTasks) {
+      const projId = task.project ? projectMap[task.project] : null;
+      const deptId = task.dept ? deptMap[task.dept] : null;
+      const coreStatus = task.status === 'done' ? 'completed' : (task.status === 'in_progress' ? 'in-progress' : 'pending');
+      const corePriority = task.priority === 'urgent' ? 'high' : task.priority;
+      const completedAt = task.status === 'done' ? new Date(Date.now() - 2 * 86400000) : null;
 
-    const res = await pool.query(
-      `INSERT INTO tasks (
-         organization_id, created_by, title, description, status, priority, due_date,
-         task_code, project_id, department_id, crm_status, crm_priority, category,
-         estimated_hours, actual_hours, completion_percentage, tags, completed_at, source
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Development', $13, $14, $15, $16, $17, 'TaskFlow')
-       RETURNING id`,
-      [
-        orgId,
-        task.creator || userMap['Aarav Sharma'],
-        task.title,
-        task.desc,
-        coreStatus,
-        corePriority,
-        task.due,
-        task.code,
-        projId,
-        deptId,
-        task.status,
-        task.priority,
-        task.est,
-        task.act,
-        task.pct,
-        task.tags,
-        completedAt,
-      ]
-    );
-    const createdId = res.rows[0].id;
+      const res = await pool.query(
+        `INSERT INTO tasks (
+           organization_id, created_by, title, description, status, priority, due_date,
+           task_code, project_id, department_id, crm_status, crm_priority, category,
+           estimated_hours, actual_hours, completion_percentage, tags, completed_at, source
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'Manufacturing', $13, $14, $15, $16, $17, 'TaskFlow')
+         RETURNING id`,
+        [
+          orgId,
+          task.creator || userMap['Aarav Sharma'],
+          task.title,
+          task.desc,
+          coreStatus,
+          corePriority,
+          task.due,
+          task.code,
+          projId,
+          deptId,
+          task.status,
+          task.priority,
+          task.est,
+          task.act,
+          task.pct,
+          task.tags,
+          completedAt,
+        ]
+      );
+      const createdId = res.rows[0].id;
 
-    // Assign users
-    if (task.assignees && task.assignees.length > 0) {
-      for (const uid of task.assignees) {
-        if (uid) {
-          await pool.query(
-            `INSERT INTO task_assignments (organization_id, task_id, user_id, assigned_by)
-             VALUES ($1, $2, $3, $4)
-             ON CONFLICT DO NOTHING`,
-            [orgId, createdId, uid, task.creator || userMap['Aarav Sharma']]
-          );
+      // Assign users
+      if (task.assignees && task.assignees.length > 0) {
+        for (const uid of task.assignees) {
+          if (uid) {
+            await pool.query(
+              `INSERT INTO task_assignments (organization_id, task_id, user_id, assigned_by)
+               VALUES ($1, $2, $3, $4)
+               ON CONFLICT DO NOTHING`,
+              [orgId, createdId, uid, task.creator || userMap['Aarav Sharma']]
+            );
+          }
         }
       }
-    }
 
-    // Add comments to select tasks
-    if (task.code === 'TASK-2026-0001') {
-      await pool.query(
-        `INSERT INTO task_comments (task_id, user_id, comment)
-         VALUES 
-           ($1, $2, 'Investigated the token expiration: refresh token was race conditioning during simultaneous fetch calls.'),
-           ($1, $3, 'Great catch! Added a shared in-flight refresh promise in axios/fetch wrapper. Verifying now.')`,
-        [createdId, userMap['Rahul Kumar'], userMap['Pooja Mehta']]
-      );
-    } else if (task.code === 'TASK-2026-0002') {
-      await pool.query(
-        `INSERT INTO task_comments (task_id, user_id, comment)
-         VALUES ($1, $2, 'Blocked on DBA index approval for production cluster. Temporary btree index created on staging.')`,
-        [createdId, userMap['Pooja Mehta']]
-      );
-    } else if (task.code === 'TASK-2026-0004') {
-      await pool.query(
-        `INSERT INTO task_comments (task_id, user_id, comment)
-         VALUES ($1, $2, 'Sidebar collapsing works smoothly with CSS transform and touch gestures tested on iPad Pro and Android.')`,
-        [createdId, userMap['Ananya Das']]
-      );
+      // Add comments to select tasks
+      if (task.code === 'TASK-2026-0001') {
+        await pool.query(
+          `INSERT INTO task_comments (task_id, user_id, comment)
+           VALUES 
+             ($1, $2, 'Tensile specimen 1 and 2 yielded at 894 MPa. Elongation at fracture is 14.2%, well above ASTM minimum.'),
+             ($1, $3, 'Excellent results. Please upload full stress-strain curve for Godrej Aerospace review.')`,
+          [createdId, userMap['Rahul Kumar'], userMap['Priya Verma']]
+        );
+      } else if (task.code === 'TASK-2026-0002') {
+        await pool.query(
+          `INSERT INTO task_comments (task_id, user_id, comment)
+           VALUES ($1, $2, 'Vacuum pump seal inspected. Pressure reached 45 mbar. Chill-vent cleaned and ready for trial casting.')`,
+          [createdId, userMap['Pooja Mehta']]
+        );
+      }
     }
   }
 
-  // 7. Seed Initial Notifications
-  const initialNotifications = [
-    {
-      userId: userMap['Rahul Kumar'],
-      title: 'High Priority Task Assigned',
-      message: 'Priya Verma assigned you to "Fix authentication session expiration" (TASK-2026-0001)',
-      type: 'assignment',
-    },
-    {
-      userId: userMap['Ananya Das'],
-      title: 'Due Today Reminder',
-      message: '"Complete responsive dashboard layout" (TASK-2026-0004) is scheduled for completion today.',
-      type: 'due_date',
-    },
-    {
-      userId: userMap['Priya Verma'],
-      title: 'Pull Request Ready for Review',
-      message: 'Rahul Kumar requested review for "Review pull request for payment integration"',
-      type: 'status_change',
-    },
-    {
-      userId: userMap['Aarav Sharma'],
-      title: 'Security Audit Scan Scheduled',
-      message: 'Amit Sinha scheduled OWASP API automated testing for this afternoon.',
-      type: 'system',
-    },
-  ];
+  console.log(`
+======================================================
+✅ Bharat Precision Dynamics / TaskFlow CRM Seed Complete!
+   Organization:   Bharat Precision Dynamics Ltd. (${orgId})
+   Departments:    12
+   Employees:      18
+   Clients (OEM):  7
+   Projects:       7
+   Tasks Seeded:   52
+   Demo Password:  ${demoPassword}
+   Demo Accounts:
+     - Super Admin: aarav.sharma@example.com (Plant Director)
+     - Admin:       priya.verma@example.com (QA & Metrology Head)
+     - Manager:     sneha.gupta@example.com (Metallurgy Lab Lead)
+     - Employee:    rahul.kumar@example.com (CNC Machining Specialist)
+======================================================
+`);
 
-  for (const notif of initialNotifications) {
-    await pool.query(
-      `INSERT INTO notifications (organization_id, user_id, title, message, type)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [orgId, notif.userId, notif.title, notif.message, notif.type]
-    );
-  }
-
-  // 8. Seed Initial Audit Logs
-  const initialAuditLogs = [
-    {
-      userId: userMap['Aarav Sharma'],
-      name: 'Aarav Sharma',
-      action: 'ORGANIZATION_INITIALIZED',
-      entity: 'organization',
-      details: { slug: 'aulten-digital', employeesCount: employeesData.length },
-    },
-    {
-      userId: userMap['Priya Verma'],
-      name: 'Priya Verma',
-      action: 'CREATE_TASK',
-      entity: 'task',
-      details: { taskCode: 'TASK-2026-0001', priority: 'urgent' },
-    },
-    {
-      userId: userMap['Vivek Yadav'],
-      name: 'Vivek Yadav',
-      action: 'CREATE_CLIENT',
-      entity: 'client',
-      details: { company: 'Tata Consultancy Systems', stage: 'Won' },
-    },
-    {
-      userId: userMap['Arjun Singh'],
-      name: 'Arjun Singh',
-      action: 'CREATE_PROJECT',
-      entity: 'project',
-      details: { name: 'Cloud Migration', budget: 1800000 },
-    },
-  ];
-
-  for (const log of initialAuditLogs) {
-    await pool.query(
-      `INSERT INTO audit_logs (organization_id, user_id, actor_name, action, entity_type, details)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [orgId, log.userId, log.name, log.action, log.entity, JSON.stringify(log.details)]
-    );
-  }
-
-  console.log(`\n======================================================`);
-  console.log(`✅ Aulten Digital TaskFlow CRM Seed Complete!`);
-  console.log(`   Organization:   Aulten Digital (${orgId})`);
-  console.log(`   Departments:    ${departmentsData.length}`);
-  console.log(`   Employees:      ${employeesData.length}`);
-  console.log(`   Clients (CRM):  ${clientsData.length}`);
-  console.log(`   Projects:       ${projectsData.length}`);
-  console.log(`   Tasks Seeded:   ${tasksData.length}`);
-  console.log(`   Demo Password:  ${demoPassword}`);
-  console.log(`   Demo Accounts:`);
-  console.log(`     - Super Admin: aarav.sharma@example.com`);
-  console.log(`     - Admin:       priya.verma@example.com`);
-  console.log(`     - Manager:     sneha.gupta@example.com`);
-  console.log(`     - Employee:    rahul.kumar@example.com`);
-  console.log(`======================================================\n`);
+  return { orgId };
 }
 
 if (require.main === module) {
   seedDatabase()
     .catch((err) => {
-      console.error('Database seeding failed:', err.message);
+      console.error('Seeding failed:', err);
       process.exitCode = 1;
     })
     .finally(() => closeDatabasePool());

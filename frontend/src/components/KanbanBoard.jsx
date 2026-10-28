@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 
 const COLUMNS = [
-  { id: 'backlog', label: 'Backlog', color: '#8d98b2' },
-  { id: 'todo', label: 'To Do', color: '#70a7ff' },
-  { id: 'in_progress', label: 'In Progress', color: '#8d82ff' },
-  { id: 'in_review', label: 'In Review', color: '#e9b86c' },
-  { id: 'blocked', label: 'Blocked', color: '#ef737e' },
-  { id: 'done', label: 'Done', color: '#5ac99a' },
+  { id: 'backlog', label: 'Backlog / Planned', color: '#94a3b8' },
+  { id: 'todo', label: 'Shift Queue', color: '#38bdf8' },
+  { id: 'in_progress', label: 'In Machining', color: '#818cf8' },
+  { id: 'in_review', label: 'QA & Metrology', color: '#fbbf24' },
+  { id: 'blocked', label: 'Maintenance Hold', color: '#f87171' },
+  { id: 'done', label: 'Passed & Dispatched', color: '#34d399' },
 ];
 
 export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, onNewTask }) {
@@ -40,7 +40,7 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
   };
 
   return (
-    <div className="kanban-wrapper" role="region" aria-label="Kanban task board">
+    <div className="kanban-wrapper" role="region" aria-label="Kanban work order board">
       <div className="kanban-board">
         {COLUMNS.map((col) => {
           const colTasks = tasks.filter((t) => (t.crm_status || 'todo') === col.id);
@@ -63,8 +63,8 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
                     type="button"
                     className="kanban-add-btn"
                     onClick={() => onNewTask({ crm_status: 'todo' })}
-                    title="Add task in To Do"
-                    aria-label="Add task"
+                    title="Add work order in Shift Queue"
+                    aria-label="Add work order"
                   >
                     +
                   </button>
@@ -74,12 +74,14 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
               <div className="kanban-column-cards">
                 {colTasks.length === 0 ? (
                   <div className="kanban-empty-dropzone">
-                    <span>No tasks in {col.label}</span>
+                    <span>No work orders in {col.label}</span>
                   </div>
                 ) : (
                   colTasks.map((task) => {
-                    const isOverdue = task.is_overdue || (task.due_date && new Date(task.due_date) < new Date() && col.id !== 'done');
-                    const priorityClass = `priority-pill--${task.crm_priority || 'medium'}`;
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const dueDate = task.due_date ? String(task.due_date).split('T')[0] : task.deadline;
+                    const isOverdue = task.is_overdue || (dueDate && dueDate < todayStr && col.id !== 'done');
+                    const priorityClass = `priority-pill--${task.crm_priority || task.urgency || 'medium'}`;
 
                     return (
                       <div
@@ -93,23 +95,29 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
                         onKeyDown={(e) => e.key === 'Enter' && onSelectTask(task)}
                       >
                         <div className="kanban-card-top">
-                          <span className="kanban-card-code">{task.task_code || 'TASK'}</span>
+                          <span className="kanban-card-code">{task.task_code || task.id || 'WO'}</span>
                           <span className={`priority-pill ${priorityClass}`}>
-                            {task.crm_priority || 'medium'}
+                            {task.crm_priority || task.urgency || 'medium'}
                           </span>
                         </div>
 
                         <h4 className="kanban-card-title">{task.title}</h4>
 
+                        {task.asset && (
+                          <div className="kanban-card-asset">
+                            <span>🔧 {task.asset}</span>
+                          </div>
+                        )}
+
                         {task.project_name && (
                           <div className="kanban-card-project">
-                            <span className="project-badge">◫ {task.project_name}</span>
+                            <span className="project-badge">📁 {task.project_name}</span>
                           </div>
                         )}
 
                         {task.blocked_reason && col.id === 'blocked' && (
                           <div className="kanban-card-blocked">
-                            <strong>Blocked:</strong> {task.blocked_reason}
+                            <strong>Hold Reason:</strong> {task.blocked_reason}
                           </div>
                         )}
 
@@ -122,18 +130,18 @@ export default function KanbanBoard({ tasks = [], onStatusChange, onSelectTask, 
                                   className="mini-avatar"
                                   title={a.full_name || a.email}
                                 >
-                                  {a.avatar || (a.full_name ? a.full_name.substring(0, 2).toUpperCase() : 'U')}
+                                  {a.avatar || (a.full_name ? a.full_name.substring(0, 2).toUpperCase() : 'IN')}
                                 </span>
                               ))
                             ) : (
-                              <span className="unassigned-text">Unassigned</span>
+                              <span className="unassigned-text">{task.employee || 'Unassigned'}</span>
                             )}
                           </div>
 
-                          {task.due_date && (
+                          {dueDate && (
                             <span className={`kanban-card-due${isOverdue ? ' is-overdue' : ''}`}>
-                              {isOverdue && '⚠️ '}
-                              {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              {isOverdue ? '⚠️ Overdue ' : '🕒 '}
+                              {new Date(`${dueDate}T00:00:00`).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
                             </span>
                           )}
                         </div>
