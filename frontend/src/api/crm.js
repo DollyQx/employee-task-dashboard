@@ -1,10 +1,10 @@
 /**
- * Bharat Precision Dynamics / Aulten TaskFlow CRM — Production API Client
+ * Employee Task Dashboard — API Client (Aulten Digital Technical Assessment)
  *
  * Implements high-resilience architecture:
  * 1. Checks live backend if configured and available.
  * 2. If backend is offline or running in standalone static Vercel deployment,
- *    seamlessly switches to the interactive client-side Manufacturing Store (localStorage),
+ *    seamlessly switches to the interactive client-side Demo Store (localStorage),
  *    enabling 100% functionality (CRUD, status changes, CSV export, role switching) without errors.
  */
 
@@ -298,14 +298,14 @@ export async function createTaskApi(taskData) {
     if (err.message === 'BACKEND_UNAVAILABLE') {
       const store = getStoredManufacturingData();
       const newId = `task-local-${Date.now()}`;
-      const codeNum = store.tasks.length + 501;
+      const codeNum = store.tasks.length + 1;
       const dept = store.departments.find((d) => d.id === taskData.department_id);
       const proj = store.projects.find((p) => p.id === taskData.project_id);
       const assignedUsers = store.users.filter((u) => taskData.assignee_ids?.includes(u.id));
 
       const newTask = {
         id: newId,
-        task_code: `WO-${codeNum}`,
+        task_code: `TASK-${String(codeNum).padStart(3, '0')}`,
         title: taskData.title,
         description: taskData.description || '',
         crm_status: taskData.crm_status || 'todo',
@@ -322,7 +322,8 @@ export async function createTaskApi(taskData) {
         tags: taskData.tags || 'Manufacturing',
         employee: assignedUsers[0]?.full_name || 'Unassigned',
         assignees: assignedUsers.map((u) => ({ id: u.id, full_name: u.full_name, email: u.email })),
-        source: 'Plant Work Order',
+        source: taskData.source || 'CRM',
+        sourceUrl: taskData.sourceUrl || '#',
         comments: [],
       };
 
@@ -791,7 +792,7 @@ export async function exportTasksCsvApi(params = {}) {
     const downloadUrl = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = downloadUrl;
-    a.download = `bharat_precision_work_orders_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `task_export_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -800,7 +801,7 @@ export async function exportTasksCsvApi(params = {}) {
     if (err.message === 'BACKEND_UNAVAILABLE') {
       // Generate client-side manufacturing CSV
       const store = getStoredManufacturingData();
-      const headers = ['Work Order ID', 'Title', 'Department', 'Project', 'Priority', 'Status', 'Due Date', 'Assignee', 'Est Hours', 'Tags'];
+      const headers = ['Task ID', 'Title', 'Department', 'Project', 'Priority', 'Status', 'Due Date', 'Assignee', 'Est Hours', 'Source'];
       const rows = store.tasks.map((t) => [
         t.task_code || t.id,
         `"${(t.title || '').replace(/"/g, '""')}"`,
@@ -811,7 +812,7 @@ export async function exportTasksCsvApi(params = {}) {
         t.deadline || '',
         `"${(t.employee || '').replace(/"/g, '""')}"`,
         t.estimated_hours || 0,
-        `"${(t.tags || '').replace(/"/g, '""')}"`,
+        `"${(t.source || '').replace(/"/g, '""')}"`,
       ]);
 
       const csvContent = '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
@@ -819,7 +820,7 @@ export async function exportTasksCsvApi(params = {}) {
       const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `bharat_precision_work_orders_${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `task_export_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       a.remove();

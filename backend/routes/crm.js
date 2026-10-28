@@ -2,17 +2,18 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * MOCK CRM / INDUSTRIAL ERP INTEGRATION
- * Data is structured for Bharat Precision Dynamics / Aulten Precision Manufacturing.
- * Returns active OEM and plant production work orders.
+ * MOCK CRM INTEGRATION
+ * Returns sample CRM tasks for the Employee Task Dashboard technical assessment.
+ * Data is intentionally generic and does not represent any real organization,
+ * customers, or employees.
  */
 
-// Dates relative to 2026-10-28 (today) so sorting is always meaningful
+// Dates relative to 2026-10-28 so deadline/urgency sorting is always meaningful.
 const CRM_TASKS = [
   {
     id: 'crm-001',
-    title: 'Tata Motors: Follow up on 500 EV Powertrain Casing delivery schedule',
-    employee: 'Rajesh Kumar',
+    title: 'Follow up with Client A on Q4 software proposal',
+    employee: 'Employee 01',
     status: 'in-progress',
     deadline: '2026-10-26', // 2 days overdue
     urgency: 'high',
@@ -21,8 +22,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-002',
-    title: 'Mahindra Heavy Industries: Dispatch tractor driveline spec sheet',
-    employee: 'Vikram Malhotra',
+    title: 'Send updated pricing sheet to Client B',
+    employee: 'Employee 02',
     status: 'pending',
     deadline: '2026-10-28', // due today
     urgency: 'high',
@@ -31,8 +32,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-003',
-    title: 'BHEL Trichy: Schedule technical review on steam turbine blade coatings',
-    employee: 'Priya Verma',
+    title: 'Schedule onboarding call for new Client C account',
+    employee: 'Employee 03',
     status: 'pending',
     deadline: '2026-10-30', // due in 2 days
     urgency: 'medium',
@@ -41,8 +42,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-004',
-    title: 'L&T Heavy Engineering: Finalize nuclear nozzle ultrasonic test protocols',
-    employee: 'Sneha Gupta',
+    title: 'Prepare quarterly account review presentation for Client A',
+    employee: 'Employee 04',
     status: 'completed',
     deadline: '2026-10-27', // overdue but completed
     urgency: 'low',
@@ -51,8 +52,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-005',
-    title: 'Godrej Aerospace: Prepare CMM dimensional report for injector heads',
-    employee: 'Rahul Kumar',
+    title: 'Draft renewal contract terms for Client B',
+    employee: 'Employee 01',
     status: 'in-progress',
     deadline: '2026-11-05',
     urgency: 'medium',
@@ -61,8 +62,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-006',
-    title: 'Maruti Suzuki: Resolve surface micro-porosity inquiry on camshaft batch',
-    employee: 'Vikram Malhotra',
+    title: 'Resolve billing discrepancy raised by Client C',
+    employee: 'Employee 02',
     status: 'pending',
     deadline: '2026-10-25', // 3 days overdue
     urgency: 'high',
@@ -71,8 +72,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-007',
-    title: 'Ashok Leyland Defense: Onboard contract for forged armored wheel hubs',
-    employee: 'Rajesh Kumar',
+    title: 'Log meeting notes from Client A discovery session',
+    employee: 'Employee 03',
     status: 'pending',
     deadline: '2026-11-10',
     urgency: 'low',
@@ -81,8 +82,8 @@ const CRM_TASKS = [
   },
   {
     id: 'crm-008',
-    title: 'Reconcile Q4 raw steel coil supplier delivery scorecards',
-    employee: 'Ananya Iyer',
+    title: 'Update CRM pipeline stages for Q4 accounts',
+    employee: 'Employee 05',
     status: 'pending',
     deadline: '2026-10-29', // due tomorrow
     urgency: 'medium',

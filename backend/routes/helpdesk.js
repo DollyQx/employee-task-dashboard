@@ -2,16 +2,18 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * MOCK HELPDESK / PLANT MAINTENANCE DISPATCH
- * Factory equipment maintenance, calibration requests, and safety tickets.
+ * MOCK HELPDESK INTEGRATION
+ * Returns sample Helpdesk tickets for the Employee Task Dashboard technical assessment.
+ * Data is intentionally generic and does not represent any real organization,
+ * customers, or employees.
  */
 
-// Dates relative to 2026-10-28 (today)
+// Dates relative to 2026-10-28 so deadline/urgency sorting is always meaningful.
 const HELPDESK_TASKS = [
   {
     id: 'hd-001',
-    title: 'Critical: Hydraulic pressure drop on 1200T Stamping Press #2',
-    employee: 'Suresh Nair',
+    title: 'Critical: Employee 04 cannot access the project management portal',
+    employee: 'Employee 04',
     status: 'in-progress',
     deadline: '2026-10-27', // overdue by 1 day
     urgency: 'high',
@@ -20,8 +22,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-002',
-    title: 'Recalibrate digital optical pyrometer on Induction Furnace Bay 1',
-    employee: 'Sneha Gupta',
+    title: 'Set up laptop and development environment for new hire',
+    employee: 'Employee 05',
     status: 'pending',
     deadline: '2026-10-28', // due today
     urgency: 'high',
@@ -30,8 +32,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-003',
-    title: 'Investigate spindle vibration harmonic spike on 5-Axis Mill #4',
-    employee: 'Rahul Kumar',
+    title: 'Investigate slow response times reported in the internal dashboard',
+    employee: 'Employee 01',
     status: 'in-progress',
     deadline: '2026-10-31',
     urgency: 'medium',
@@ -40,8 +42,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-004',
-    title: 'Replace depleted argon/CO2 shielding gas manifold in Welding Cell 3',
-    employee: 'Amit Patel',
+    title: 'Reset 2FA for Employee 02 after device change',
+    employee: 'Employee 02',
     status: 'pending',
     deadline: '2026-10-29', // due tomorrow
     urgency: 'high',
@@ -50,8 +52,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-005',
-    title: 'Annual metrology recalibration for 250kN Zwick Tensile Tester',
-    employee: 'Deepak Chauhan',
+    title: 'Export last quarter data report for finance team review',
+    employee: 'Employee 03',
     status: 'completed',
     deadline: '2026-10-26',
     urgency: 'medium',
@@ -60,8 +62,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-006',
-    title: 'Reset SCADA edge gateway IP routing on Stamping Line 4',
-    employee: 'Arjun Singh',
+    title: 'Configure VPN access for remote employee request',
+    employee: 'Employee 04',
     status: 'pending',
     deadline: '2026-11-04',
     urgency: 'low',
@@ -70,8 +72,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-007',
-    title: 'Emergency: Laser curtain interlock fault on Automated Blanking Cell',
-    employee: 'Pooja Mehta',
+    title: 'Critical: Team shared drive permissions broken after migration',
+    employee: 'Employee 05',
     status: 'pending',
     deadline: '2026-10-24', // 4 days overdue
     urgency: 'high',
@@ -80,8 +82,8 @@ const HELPDESK_TASKS = [
   },
   {
     id: 'hd-008',
-    title: 'Quarterly shopfloor PPE and air-fed respirator mask audit',
-    employee: 'Pooja Mehta',
+    title: 'Update software licences before end-of-year renewal deadline',
+    employee: 'Employee 01',
     status: 'pending',
     deadline: '2026-11-15',
     urgency: 'low',
