@@ -5,6 +5,9 @@ import TaskList from './components/TaskList';
 import LoadingSpinner from './components/LoadingSpinner';
 import ErrorMessage from './components/ErrorMessage';
 import TaskDetailDrawer from './components/TaskDetailDrawer';
+import TeamAnalytics from './components/TeamAnalytics';
+
+const UNASSIGNED_EMPLOYEE = '__unassigned__';
 
 export default function App() {
   const [tasks, setTasks] = useState([]);
@@ -61,7 +64,8 @@ export default function App() {
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
     return tasks.filter((task) => {
-      const matchesEmployee = employeeFilter === 'all' || task.employee === employeeFilter;
+      const matchesEmployee = employeeFilter === 'all'
+        || (employeeFilter === UNASSIGNED_EMPLOYEE ? !task.employee?.trim() : task.employee?.trim() === employeeFilter);
       const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || task.urgency === priorityFilter;
       const matchesSource = sourceFilter === 'all' || task.source.toLowerCase() === sourceFilter;
@@ -84,6 +88,12 @@ export default function App() {
     setOverdueOnly(false);
   }, []);
   const closeTaskDetails = useCallback(() => setSelectedTask(null), []);
+  const openEmployeeTasks = useCallback((employee) => {
+    clearFilters();
+    setEmployeeFilter(employee);
+    setActivePage('all');
+    setMobileNavOpen(false);
+  }, [clearFilters]);
   const navigate = (page) => {
     setActivePage(page);
     setMobileNavOpen(false);
@@ -104,6 +114,7 @@ export default function App() {
     all: ['All tasks', 'Every task across your connected workspaces'],
     crm: ['CRM tasks', 'Follow-ups and client work from your CRM'],
     helpdesk: ['Helpdesk tasks', 'Tickets and support work from Helpdesk'],
+    analytics: ['Team Analytics', 'Workload and completion across your team'],
     settings: ['Settings', 'Connection details for your task sources'],
   };
   const currentTitle = pageTitles[activePage] || pageTitles.overview;
@@ -134,6 +145,7 @@ export default function App() {
           <button className={`nav-item${activePage === 'all' ? ' is-active' : ''}`} onClick={() => navigate('all')}><span className="nav-icon">☷</span>All tasks<span className="nav-count">{tasks.length}</span></button>
           <button className={`nav-item${activePage === 'crm' ? ' is-active' : ''}`} onClick={() => navigate('crm')}><span className="source-dot source-dot--crm" />CRM tasks</button>
           <button className={`nav-item${activePage === 'helpdesk' ? ' is-active' : ''}`} onClick={() => navigate('helpdesk')}><span className="source-dot source-dot--helpdesk" />Helpdesk tasks</button>
+          <button className={`nav-item${activePage === 'analytics' ? ' is-active' : ''}`} onClick={() => navigate('analytics')}><span className="nav-icon">▥</span>Team Analytics</button>
         </nav>
 
         <div className="sidebar-bottom">
@@ -163,7 +175,9 @@ export default function App() {
         </header>
 
         <main className="content" id="main-content">
-          {activePage === 'settings' ? (
+          {activePage === 'analytics' ? (
+            loading ? <LoadingSpinner /> : error ? <ErrorMessage error={error} onRetry={loadTasks} /> : <TeamAnalytics tasks={tasks} onSelectEmployee={openEmployeeTasks} />
+          ) : activePage === 'settings' ? (
             <section className="settings-page">
               <div className="page-heading"><div><p className="eyebrow">PREFERENCES</p><h1>{currentTitle[0]}</h1><p>{currentTitle[1]}</p></div></div>
               <section className="settings-section"><div className="section-heading"><div><h2>Connected sources</h2><p>TaskFlow reads tasks from these configured API sources.</p></div><button className="button button--secondary" onClick={loadTasks} disabled={loading}>{loading ? 'Refreshing…' : '↻ Refresh connections'}</button></div>

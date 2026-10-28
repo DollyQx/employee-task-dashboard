@@ -10,7 +10,8 @@ export default function TaskCard({ task, view = 'list', onViewDetails }) {
   const dueLabel = isOverdue
     ? `${Math.abs(daysFromToday)}d overdue`
     : isToday ? 'Due today' : new Date(`${deadline}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const initials = employee.split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+  const employeeLabel = employee?.trim() || 'Unassigned';
+  const initials = employee?.trim().split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
   const sourceKey = source.toLowerCase().replace(/\s+/g, '-');
 
   return (
@@ -22,7 +23,7 @@ export default function TaskCard({ task, view = 'list', onViewDetails }) {
           <span className="task-id">{id} <span className="task-source-inline">· {source}</span></span>
         </div>
       </div>
-      <div className="task-assignee"><span className="assignee-avatar">{initials}</span><span>{employee}</span></div>
+      <div className="task-assignee">{initials && <span className="assignee-avatar">{initials}</span>}<span>{employeeLabel}</span></div>
       <div className="task-priority"><UrgencyBadge urgency={urgency} /></div>
       <div className="task-status"><StatusBadge status={status} /></div>
       <div className={`task-due task-due--${dueState}`} title={`Due ${deadline}${isOverdue ? `, ${Math.abs(daysFromToday)} days overdue` : ''}`}>

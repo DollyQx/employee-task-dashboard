@@ -15,8 +15,9 @@ export default function FilterBar({
   onReset,
 }) {
   const employees = useMemo(() => {
-    return [...new Set(tasks.map((task) => task.employee))].sort();
+    return [...new Set(tasks.map((task) => task.employee?.trim()).filter(Boolean))].sort();
   }, [tasks]);
+  const hasUnassigned = tasks.some((task) => !task.employee?.trim());
 
   const hasActiveFilter = Boolean(search) || employeeFilter !== 'all' || statusFilter !== 'all'
     || priorityFilter !== 'all' || sourceFilter !== 'all';
@@ -32,6 +33,7 @@ export default function FilterBar({
         aria-label="Assignee"
       >
         <option value="all">All assignees</option>
+        {hasUnassigned && <option value="__unassigned__">Unassigned</option>}
         {employees.map((name) => (
           <option key={name} value={name}>{name}</option>
         ))}
