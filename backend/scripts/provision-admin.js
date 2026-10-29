@@ -3,12 +3,12 @@ const { getPool, closeDatabasePool } = require('../db/pool');
 const { hashPassword } = require('../utils/auth');
 
 async function provisionAdmin() {
-  const email = process.env.ADMIN_EMAIL || 'admin@aulten.example.com';
-  const name = process.env.ADMIN_NAME || 'System Administrator';
-  const orgSlug = process.env.ORG_SLUG || 'aulten-digital';
-  const orgName = process.env.ORG_NAME || 'Aulten Digital';
+  const email = process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL || process.argv[2] || 'admin@startizlabs.com';
+  const name = process.env.SUPER_ADMIN_NAME || process.env.ADMIN_NAME || process.argv[4] || 'Dolly';
+  const orgSlug = process.env.ORG_SLUG || 'startiz-labs';
+  const orgName = process.env.ORG_NAME || 'Startiz Labs';
 
-  let rawPassword = process.env.ADMIN_PASSWORD;
+  let rawPassword = process.env.SUPER_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || process.argv[3];
   let generated = false;
   let passwordPreserved = false;
   if (!rawPassword) {
@@ -35,14 +35,11 @@ async function provisionAdmin() {
     // 2. Hash password
     const passwordHash = await hashPassword(rawPassword);
 
-    // 3. Upsert Admin User
+    // 3. Upsert Super Admin User (Dolly)
     const existingUser = await pool.query('SELECT id, password_hash FROM users WHERE email = $1', [email.toLowerCase()]);
     if (existingUser.rows.length > 0) {
       const existingRecord = existingUser.rows[0];
-      // Only reset the password if it is missing (null) or if ADMIN_PASSWORD was explicitly provided.
-      // This prevents accidental password resets when re-running provisioning on a live system
-      // where the admin has already set their own password.
-      const shouldUpdatePassword = !existingRecord.password_hash || Boolean(process.env.ADMIN_PASSWORD);
+      const shouldUpdatePassword = !existingRecord.password_hash || Boolean(process.env.SUPER_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || process.argv[3]);
       if (shouldUpdatePassword) {
         await pool.query(
           `UPDATE users SET
@@ -55,9 +52,8 @@ async function provisionAdmin() {
            WHERE id = $3`,
           [name, passwordHash, existingRecord.id]
         );
-        console.log(`Updated existing user to Super Admin: ${email}`);
+        console.log(`Updated existing user to Super Admin: ${email} (${name})`);
       } else {
-        // Promote role without touching the password
         await pool.query(
           `UPDATE users SET
              full_name = $1,
@@ -68,7 +64,7 @@ async function provisionAdmin() {
            WHERE id = $2`,
           [name, existingRecord.id]
         );
-        console.log(`Promoted existing user to Super Admin (password unchanged): ${email}`);
+        console.log(`Promoted existing user to Super Admin (password unchanged): ${email} (${name})`);
         generated = false;
         passwordPreserved = true;
       }
@@ -77,23 +73,25 @@ async function provisionAdmin() {
         `INSERT INTO users (
            organization_id, full_name, email, password_hash, role, crm_role,
            employee_id, designation, employment_status, is_active
-         ) VALUES ($1, $2, $3, $4, 'owner', 'super_admin', 'AD-0001', 'Chief Administrator', 'active', true)`,
+         ) VALUES ($1, $2, $3, $4, 'owner', 'super_admin', 'AD-0001', 'Super Administrator', 'active', true)`,
         [orgId, name, email.toLowerCase(), passwordHash]
       );
-      console.log(`Provisioned new Super Admin: ${email}`);
+      console.log(`Provisioned new Super Admin: ${email} (${name})`);
     }
 
     console.log('\n======================================================');
-    console.log('✅ Admin Provisioning Complete');
+    console.log('✅ Super Admin Provisioning Complete');
     console.log(`   Organization: ${orgName}`);
+    console.log(`   Name:         ${name}`);
     console.log(`   Email:        ${email}`);
+    console.log(`   Role:         Super Admin`);
     if (generated) {
       console.log(`   Generated Password: ${rawPassword}`);
       console.log('   ⚠️  Save this password securely immediately! It will not be shown again.');
     } else if (passwordPreserved) {
       console.log('   Password:     [Preserved existing user password]');
     } else {
-      console.log('   Password:     [Provided in environment variable]');
+      console.log('   Password:     [Provided in environment variable / argument]');
     }
     console.log('======================================================\n');
   } finally {
@@ -103,8 +101,8 @@ async function provisionAdmin() {
 
 if (require.main === module) {
   provisionAdmin().catch((err) => {
-    console.error('Admin provisioning failed:', err.message);
-    process.exitCode = 1;
+    console.error('Provisioning failed:', err.message);
+    process.exit(1);
   });
 }
 

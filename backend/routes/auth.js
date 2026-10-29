@@ -249,6 +249,47 @@ function createAuthRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
+  router.post('/change-password', requireAuth, async (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!currentPassword || !newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+      return res.status(400).json({ error: 'Current password and a new password of at least 8 characters are required.' });
+    }
+
+    try {
+      const pool = poolProvider();
+      const userRes = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+      if (userRes.rows.length === 0) {
+        return res.status(404).json({ error: 'User not found.' });
+      }
+
+      const isValid = await verifyPassword(currentPassword, userRes.rows[0].password_hash);
+      if (!isValid) {
+        return res.status(400).json({ error: 'Current password is incorrect.' });
+      }
+
+      const newHash = await hashPassword(newPassword);
+      await pool.query(
+        'UPDATE users SET password_hash = $1, must_change_password = false, updated_at = now() WHERE id = $2',
+        [newHash, req.user.id]
+      );
+
+      await logAudit(pool, {
+        organizationId: req.user.organization_id,
+        userId: req.user.id,
+        actorName: req.user.full_name,
+        action: 'PASSWORD_CHANGE',
+        entityType: 'auth',
+        entityId: req.user.id,
+        ipAddress: req.ip,
+      });
+
+      return res.json({ message: 'Password changed successfully.' });
+    } catch (err) {
+      console.error('Change password error:', err.message);
+      return res.status(500).json({ error: 'Could not change password.' });
+    }
+  });
+
   // Fast demo user switcher for testing & evaluation
   // SECURITY: Disabled in production by default to prevent unauthenticated privilege escalation.
   // Any exception requires explicit ALLOW_DEMO_SWITCH=true and fails closed.

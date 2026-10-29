@@ -23,20 +23,20 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
     await pool.query('UPDATE organizations SET name = $1 WHERE id = $2', ['Aulten Digital Private Limited', orgId]);
   }
 
-  // 2. Manufacturing Departments
+  // 2. SaaS Departments
   const departmentsData = [
-    { name: 'Plant Operations & Production', code: 'OPS', description: 'Factory floor production scheduling, cycle-time tracking, and shift throughput management.' },
-    { name: 'CNC Machining & Tooling', code: 'CNC', description: 'High-precision 5-axis milling, wire EDM, carbide tooling, and micrometric tolerance machining.' },
-    { name: 'Quality Assurance & ISO 9001', code: 'QA', description: 'Coordinate measuring machine (CMM) inspections, defect Pareto analysis, and ISO 9001 audits.' },
-    { name: 'Assembly & Heavy Fabrication', code: 'ASM', description: 'Robotic welding cells, sub-assembly integration, torque-spec fastening, and transmission assembly.' },
-    { name: 'Preventive Maintenance & Reliability', code: 'MNT', description: 'Vibration monitoring, hydraulic press overhauls, predictive maintenance, and machine uptime.' },
-    { name: 'Metallurgy & Materials Testing Lab', code: 'MET', description: 'Optical emission spectrometry, tensile elongation, Charpy impact tests, and case hardness analysis.' },
-    { name: 'Supply Chain & Steel Sourcing', code: 'SCM', description: 'Procurement of hot-rolled steel coils, aluminum billets, forging ingots, and vendor logistics.' },
-    { name: 'Environment, Health & Safety (EHS)', code: 'EHS', description: 'Zero-harm shop floor enforcement, OSHA / ISO 45001 compliance, machine safety interlocks, and PPE.' },
-    { name: 'Industrial Automation & SCADA', code: 'AUT', description: 'Siemens S7-1500 PLC programming, KUKA robotic welding kinematics, and IoT SCADA gateways.' },
-    { name: 'Die Stamping & Forging', code: 'STP', description: '1,200-ton hydraulic stamping presses, progressive blanking dies, and hot forging operations.' },
-    { name: 'Dispatch & Finished Goods Logistics', code: 'DSP', description: 'Anti-corrosion VCI barrier packaging, wooden crating, barcode tracking, and OEM deliveries.' },
-    { name: 'Plant HR & Workforce Governance', code: 'HR', description: 'Worker shift rostering, technical apprenticeship training, industrial relations, and welfare.' },
+    { name: 'Engineering & Technology', code: 'ENG', description: 'Core application development, architecture, API services, and system reliability.' },
+    { name: 'Quality Assurance & Testing', code: 'QA', description: 'Test automation, performance benchmarking, end-to-end integration, and release certification.' },
+    { name: 'DevOps & Cloud Infrastructure', code: 'OPS', description: 'CI/CD pipelines, container orchestration, cloud environments, and uptime monitoring.' },
+    { name: 'Product Management & UX', code: 'PRD', description: 'Product roadmap, feature specifications, UI/UX prototyping, and backlog grooming.' },
+    { name: 'Customer Support & Helpdesk', code: 'CS', description: 'Tier 1/2 technical assistance, SLA escalation triage, and customer feedback analysis.' },
+    { name: 'Enterprise Solutions & Architecture', code: 'SOL', description: 'Client CRM onboarding, enterprise systems integration, and technical pre-sales.' },
+    { name: 'Security & Compliance', code: 'SEC', description: 'SOC 2, ISO 27001 readiness, vulnerability scanning, and identity access management.' },
+    { name: 'Sales & Account Management', code: 'SLS', description: 'Enterprise deal cycle tracking, client demonstrations, and partner relationship management.' },
+    { name: 'Data & Analytics', code: 'DAT', description: 'Business intelligence dashboards, customer telemetry, and predictive task analytics.' },
+    { name: 'Mobile & Frontend Systems', code: 'MOB', description: 'React design system components, micro-frontends, and mobile responsiveness.' },
+    { name: 'HR & People Operations', code: 'HR', description: 'Talent recruitment, employee onboarding, performance reviews, and team culture.' },
+    { name: 'Finance & Business Operations', code: 'FIN', description: 'Financial forecasting, vendor billing, cloud infrastructure expenditure, and auditing.' },
   ];
 
   const deptMap = {};
@@ -53,18 +53,45 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
     deptMap[dept.name] = res.rows[0].id;
   }
 
-  // 3. Indian Manufacturing Personnel (18 employees)
+  // Aliases for backward compatibility
+  deptMap['Plant Operations & Production'] = deptMap['Engineering & Technology'];
+  deptMap['CNC Machining & Tooling'] = deptMap['Enterprise Solutions & Architecture'];
+  deptMap['Quality Assurance & ISO 9001'] = deptMap['Quality Assurance & Testing'];
+  deptMap['Assembly & Heavy Fabrication'] = deptMap['Mobile & Frontend Systems'];
+  deptMap['Preventive Maintenance & Reliability'] = deptMap['DevOps & Cloud Infrastructure'];
+  deptMap['Metallurgy & Materials Testing Lab'] = deptMap['Data & Analytics'];
+  deptMap['Supply Chain & Steel Sourcing'] = deptMap['Sales & Account Management'];
+  deptMap['Environment, Health & Safety (EHS)'] = deptMap['Security & Compliance'];
+  deptMap['Industrial Automation & SCADA'] = deptMap['Engineering & Technology'];
+  deptMap['Die Stamping & Forging'] = deptMap['Finance & Business Operations'];
+  deptMap['Dispatch & Finished Goods Logistics'] = deptMap['Customer Support & Helpdesk'];
+  deptMap['Plant HR & Workforce Governance'] = deptMap['HR & People Operations'];
+
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || process.env.ADMIN_EMAIL || 'admin@startizlabs.com';
+  const superAdminName = process.env.SUPER_ADMIN_NAME || process.env.ADMIN_NAME || 'Dolly';
+
+  // 3. Team Personnel (18 employees)
   const employeesData = [
     {
-      name: 'Aarav Sharma',
+      name: superAdminName,
+      email: superAdminEmail,
+      empId: 'SL-0001',
+      crmRole: 'super_admin',
+      coreRole: 'owner',
+      dept: 'Engineering & Technology',
+      designation: 'Super Administrator',
+      phone: '+91 98101 23456',
+    },
+    ...(superAdminEmail !== 'aarav.sharma@example.com' ? [{
+      name: 'Dolly',
       email: 'aarav.sharma@example.com',
       empId: 'EMP-0101',
       crmRole: 'super_admin',
       coreRole: 'owner',
-      dept: 'Plant Operations & Production',
-      designation: 'VP of Engineering',
-      phone: '+91 98101 23456',
-    },
+      dept: 'Engineering & Technology',
+      designation: 'Super Administrator',
+      phone: '+91 98101 23450',
+    }] : []),
     {
       name: 'Priya Verma',
       email: 'priya.verma@example.com',
@@ -273,7 +300,13 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
       ]
     );
     userMap[emp.name] = res.rows[0].id;
+    userMap[emp.email] = res.rows[0].id;
   }
+
+  userMap['Dolly'] = userMap[superAdminName];
+  userMap['Aarav Sharma'] = userMap['Dolly SuperAdmin'] || userMap[superAdminName];
+  userMap['admin@startizlabs.com'] = userMap[superAdminName];
+  userMap['admin@startilabs.com'] = userMap[superAdminName];
 
   // Set Department Heads
   await pool.query('UPDATE departments SET head_id = $1 WHERE id = $2', [userMap['Rajesh Kumar'], deptMap['Plant Operations & Production']]);
@@ -967,6 +1000,61 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
     }
   }
 
+  // 6. Seed Initial Attendance Records
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    const rahulId = userMap['Rahul Kumar'];
+    const priyaId = userMap['Priya Verma'];
+    const snehaId = userMap['Sneha Gupta'];
+
+    if (rahulId) {
+      const checkInToday = new Date();
+      checkInToday.setHours(9, 30, 0, 0);
+      await pool.query(
+        `INSERT INTO attendance_records (organization_id, user_id, date, check_in_at, status)
+         VALUES ($1, $2, $3, $4, 'present')`,
+        [orgId, rahulId, todayStr, checkInToday]
+      );
+
+      const checkInYest = new Date(yesterday);
+      checkInYest.setHours(9, 15, 0, 0);
+      const checkOutYest = new Date(yesterday);
+      checkOutYest.setHours(17, 45, 0, 0);
+      await pool.query(
+        `INSERT INTO attendance_records (organization_id, user_id, date, check_in_at, check_out_at, duration_minutes, status)
+         VALUES ($1, $2, $3, $4, $5, 510, 'checked_out')`,
+        [orgId, rahulId, yesterdayStr, checkInYest, checkOutYest]
+      );
+    }
+
+    if (priyaId) {
+      const checkInToday = new Date();
+      checkInToday.setHours(9, 0, 0, 0);
+      await pool.query(
+        `INSERT INTO attendance_records (organization_id, user_id, date, check_in_at, status)
+         VALUES ($1, $2, $3, $4, 'present')`,
+        [orgId, priyaId, todayStr, checkInToday]
+      );
+    }
+
+    if (snehaId) {
+      const checkInToday = new Date();
+      checkInToday.setHours(8, 45, 0, 0);
+      const checkOutToday = new Date();
+      checkOutToday.setHours(17, 15, 0, 0);
+      await pool.query(
+        `INSERT INTO attendance_records (organization_id, user_id, date, check_in_at, check_out_at, duration_minutes, status)
+         VALUES ($1, $2, $3, $4, $5, 510, 'checked_out')`,
+        [orgId, snehaId, todayStr, checkInToday, checkOutToday]
+      );
+    }
+  } catch (attErr) {
+    console.warn('Attendance seeding skipped:', attErr.message);
+  }
+
   console.log(`
 ======================================================
 ✅ Aulten Digital / TaskFlow CRM Seed Complete!
@@ -978,7 +1066,7 @@ async function seedDatabase({ pool = getPool(), demoPassword = process.env.DEMO_
    Tasks Seeded:   52
    Demo Password:  ${demoPassword}
    Demo Accounts:
-     - Super Admin: aarav.sharma@example.com (VP of Engineering)
+     - Super Admin: Dolly (${superAdminEmail})
      - Admin:       priya.verma@example.com (Head of QA)
      - Manager:     sneha.gupta@example.com (DevOps & Cloud Lead)
      - Employee:    rahul.kumar@example.com (Senior Full Stack Developer)

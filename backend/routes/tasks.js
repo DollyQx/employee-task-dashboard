@@ -22,11 +22,12 @@ function mapToCorePriority(crmPriority) {
 function createTasksRoutes({ poolProvider = getPool } = {}) {
   const router = express.Router();
 
-  // 1. List & Search Tasks with Pagination & Multi-filtering
+  // 1. List & Search Tasks with Pagination & Role-Based Filtering
   router.get('/', requireAuth, async (req, res) => {
     try {
       const pool = poolProvider();
       const orgId = req.user.organization_id;
+      const userRole = req.user.crm_role || 'employee';
 
       const page = Math.max(1, parseInt(req.query.page, 10) || 1);
       const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
@@ -41,13 +42,37 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         assignee_id,
         my_tasks,
         overdue,
+        source,
         sort_by = 'created_at',
         sort_order = 'desc',
       } = req.query;
 
+      const joins = [
+        'LEFT JOIN projects p ON t.project_id = p.id',
+        'LEFT JOIN departments d ON t.department_id = d.id',
+        'LEFT JOIN users u ON t.created_by = u.id',
+      ];
+
       const whereClauses = ['t.organization_id = $1'];
       const values = [orgId];
       let paramIndex = 2;
+
+      // ── RBAC Enforcement ──────────────────────────────────────────────
+      // Employee role is strictly restricted to viewing only their assigned or self-created tasks.
+      if (userRole === 'employee') {
+        joins.push(`LEFT JOIN task_assignments emp_ta ON emp_ta.task_id = t.id AND emp_ta.user_id = $${paramIndex}`);
+        whereClauses.push(`(emp_ta.user_id IS NOT NULL OR t.created_by = $${paramIndex})`);
+        values.push(req.user.id);
+        paramIndex++;
+      } else if (my_tasks === 'true') {
+        joins.push(`JOIN task_assignments my_ta ON my_ta.task_id = t.id AND my_ta.user_id = $${paramIndex}`);
+        values.push(req.user.id);
+        paramIndex++;
+      } else if (assignee_id) {
+        joins.push(`JOIN task_assignments ass_filter_ta ON ass_filter_ta.task_id = t.id AND ass_filter_ta.user_id = $${paramIndex}`);
+        values.push(assignee_id);
+        paramIndex++;
+      }
 
       if (search && search.trim()) {
         whereClauses.push(`(t.title ILIKE $${paramIndex} OR t.task_code ILIKE $${paramIndex} OR t.description ILIKE $${paramIndex})`);
@@ -79,15 +104,9 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         paramIndex++;
       }
 
-      if (assignee_id) {
-        whereClauses.push(`EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.user_id = $${paramIndex})`);
-        values.push(assignee_id);
-        paramIndex++;
-      }
-
-      if (my_tasks === 'true') {
-        whereClauses.push(`EXISTS (SELECT 1 FROM task_assignments ta WHERE ta.task_id = t.id AND ta.user_id = $${paramIndex})`);
-        values.push(req.user.id);
+      if (source && source !== 'all') {
+        whereClauses.push(`t.source ILIKE $${paramIndex}`);
+        values.push(source);
         paramIndex++;
       }
 
@@ -95,10 +114,14 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         whereClauses.push(`t.due_date IS NOT NULL AND t.due_date < CURRENT_DATE AND t.crm_status != 'done'`);
       }
 
+      const joinSql = joins.join(' ');
       const whereSql = whereClauses.join(' AND ');
 
       // Total count
-      const countResult = await pool.query(`SELECT COUNT(*) FROM tasks t WHERE ${whereSql}`, values);
+      const countResult = await pool.query(
+        `SELECT COUNT(DISTINCT t.id) FROM tasks t ${joinSql} WHERE ${whereSql}`,
+        values
+      );
       const total = parseInt(countResult.rows[0].count, 10);
 
       // Safe sorting
@@ -113,9 +136,9 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       const orderColumn = sortColumnMap[sort_by] || 't.created_at';
       const orderDirection = sort_order.toLowerCase() === 'asc' ? 'ASC' : 'DESC';
 
-      // Query tasks with joins for project, department, creator, and assignees
+      // Query tasks with joins
       const tasksQuery = `
-        SELECT 
+        SELECT DISTINCT
           t.id,
           t.organization_id,
           t.task_code,
@@ -135,7 +158,9 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
           t.tags,
           t.source,
           t.source_url,
+          t.source_link,
           t.blocked_reason,
+          ${userRole === 'employee' ? 'NULL AS internal_notes' : 't.internal_notes'},
           t.created_at,
           t.updated_at,
           p.id AS project_id,
@@ -148,26 +173,9 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
             t.due_date IS NOT NULL 
             AND t.due_date < CURRENT_DATE 
             AND t.crm_status != 'done'
-          ) AS is_overdue,
-          (
-            SELECT json_agg(json_build_object(
-              'id', ass_u.id,
-              'full_name', ass_u.full_name,
-              'email', ass_u.email,
-              'avatar', ass_u.avatar,
-              'crm_role', ass_u.crm_role
-            ))
-            FROM task_assignments ta
-            JOIN users ass_u ON ta.user_id = ass_u.id
-            WHERE ta.task_id = t.id
-          ) AS assignees,
-          (
-            SELECT COUNT(*) FROM task_comments tc WHERE tc.task_id = t.id
-          ) AS comments_count
+          ) AS is_overdue
         FROM tasks t
-        LEFT JOIN projects p ON t.project_id = p.id
-        LEFT JOIN departments d ON t.department_id = d.id
-        LEFT JOIN users u ON t.created_by = u.id
+        ${joinSql}
         WHERE ${whereSql}
         ORDER BY ${orderColumn} ${orderDirection}
         LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
@@ -176,27 +184,65 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       const tasksValues = [...values, limit, offset];
       const { rows: taskRows } = await pool.query(tasksQuery, tasksValues);
 
+      // Fetch assignees for each returned task
+      const taskIds = taskRows.map((t) => t.id);
+      let assigneesByTask = {};
+      let commentsCountByTask = {};
+
+      if (taskIds.length > 0) {
+        const assigneesRes = await pool.query(
+          `SELECT ta.task_id, ass_u.id, ass_u.full_name, ass_u.email, ass_u.avatar, ass_u.crm_role
+           FROM task_assignments ta
+           JOIN users ass_u ON ta.user_id = ass_u.id
+           WHERE ta.task_id = ANY($1::uuid[])`,
+          [taskIds]
+        );
+        assigneesRes.rows.forEach((r) => {
+          if (!assigneesByTask[r.task_id]) assigneesByTask[r.task_id] = [];
+          assigneesByTask[r.task_id].push({
+            id: r.id,
+            full_name: r.full_name,
+            email: r.email,
+            avatar: r.avatar,
+            crm_role: r.crm_role,
+          });
+        });
+
+        const commentsRes = await pool.query(
+          `SELECT tc.task_id, COUNT(*) AS count
+           FROM task_comments tc
+           WHERE tc.task_id = ANY($1::uuid[])
+             ${userRole === 'employee' ? 'AND (tc.is_internal = false OR tc.is_internal IS NULL)' : ''}
+           GROUP BY tc.task_id`,
+          [taskIds]
+        );
+        commentsRes.rows.forEach((r) => {
+          commentsCountByTask[r.task_id] = parseInt(r.count, 10);
+        });
+      }
+
       // Status counters snapshot
       const countsQuery = `
         SELECT 
-          COUNT(*) AS total,
-          COUNT(*) FILTER (WHERE crm_status = 'backlog') AS backlog,
-          COUNT(*) FILTER (WHERE crm_status = 'todo') AS todo,
-          COUNT(*) FILTER (WHERE crm_status = 'in_progress') AS in_progress,
-          COUNT(*) FILTER (WHERE crm_status = 'in_review') AS in_review,
-          COUNT(*) FILTER (WHERE crm_status = 'blocked') AS blocked,
-          COUNT(*) FILTER (WHERE crm_status = 'done') AS done,
-          COUNT(*) FILTER (WHERE due_date IS NOT NULL AND due_date < CURRENT_DATE AND crm_status != 'done') AS overdue
-        FROM tasks
-        WHERE organization_id = $1
+          COUNT(DISTINCT t.id) AS total,
+          COUNT(DISTINCT t.id) FILTER (WHERE crm_status = 'backlog') AS backlog,
+          COUNT(DISTINCT t.id) FILTER (WHERE crm_status = 'todo') AS todo,
+          COUNT(DISTINCT t.id) FILTER (WHERE crm_status = 'in_progress') AS in_progress,
+          COUNT(DISTINCT t.id) FILTER (WHERE crm_status = 'in_review') AS in_review,
+          COUNT(DISTINCT t.id) FILTER (WHERE crm_status = 'blocked') AS blocked,
+          COUNT(DISTINCT t.id) FILTER (WHERE crm_status = 'done') AS done,
+          COUNT(DISTINCT t.id) FILTER (WHERE due_date IS NOT NULL AND due_date < CURRENT_DATE AND crm_status != 'done') AS overdue
+        FROM tasks t
+        ${joinSql}
+        WHERE ${whereSql}
       `;
-      const countsResult = await pool.query(countsQuery, [orgId]);
+      const countsResult = await pool.query(countsQuery, values);
 
       return res.json({
         tasks: taskRows.map((t) => ({
           ...t,
-          assignees: t.assignees || [],
-          comments_count: parseInt(t.comments_count || 0, 10),
+          assignees: assigneesByTask[t.id] || [],
+          comments_count: commentsCountByTask[t.id] || 0,
         })),
         pagination: {
           total,
@@ -212,16 +258,18 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 2. Single Task Details
+  // 2. Single Task Details (with RBAC enforcement)
   router.get('/:id', requireAuth, async (req, res) => {
     try {
       const pool = poolProvider();
       const orgId = req.user.organization_id;
       const taskId = req.params.id;
+      const userRole = req.user.crm_role || 'employee';
 
       const taskQuery = `
         SELECT 
           t.*,
+          ${userRole === 'employee' ? 'NULL AS internal_notes' : 't.internal_notes'},
           p.name AS project_name,
           d.name AS department_name,
           u.full_name AS creator_name,
@@ -241,6 +289,20 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         return res.status(404).json({ error: 'Task not found.' });
       }
 
+      const task = rows[0];
+
+      // Employee permission check: must be assigned or creator
+      if (userRole === 'employee') {
+        const accessCheck = await pool.query(
+          `SELECT 1 FROM task_assignments ta 
+           WHERE ta.task_id = $1 AND ta.user_id = $2`,
+          [taskId, req.user.id]
+        );
+        if (accessCheck.rows.length === 0 && task.created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You do not have permission to access this task.' });
+        }
+      }
+
       // Fetch assignees
       const assigneesQuery = `
         SELECT ass_u.id, ass_u.full_name, ass_u.email, ass_u.avatar, ass_u.crm_role
@@ -250,11 +312,12 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       `;
       const assigneesResult = await pool.query(assigneesQuery, [taskId]);
 
-      // Fetch comments
+      // Fetch comments (distinguish public comments from internal notes)
       const commentsQuery = `
         SELECT 
           tc.id,
           tc.comment,
+          tc.is_internal,
           tc.created_at,
           u.id AS user_id,
           u.full_name,
@@ -262,7 +325,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
           u.crm_role
         FROM task_comments tc
         JOIN users u ON tc.user_id = u.id
-        WHERE tc.task_id = $1
+        WHERE tc.task_id = $1 ${userRole === 'employee' ? 'AND (tc.is_internal = false OR tc.is_internal IS NULL)' : ''}
         ORDER BY tc.created_at ASC
       `;
       const commentsResult = await pool.query(commentsQuery, [taskId]);
@@ -273,12 +336,29 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       `;
       const attachmentsResult = await pool.query(attachmentsQuery, [taskId]);
 
+      // Fetch activity history
+      const historyQuery = `
+        SELECT id, actor_name, action, details, created_at
+        FROM audit_logs
+        WHERE organization_id = $1 AND entity_type = 'task' AND entity_id = $2
+        ORDER BY created_at DESC
+        LIMIT 25
+      `;
+      const historyResult = await pool.query(historyQuery, [orgId, taskId]);
+
       return res.json({
         task: {
-          ...rows[0],
+          ...task,
           assignees: assigneesResult.rows,
           comments: commentsResult.rows,
           attachments: attachmentsResult.rows,
+          history: historyResult.rows.map((r) => {
+            let details = r.details;
+            try {
+              if (typeof r.details === 'string') details = JSON.parse(r.details);
+            } catch {}
+            return { ...r, details };
+          }),
         },
       });
     } catch (err) {
@@ -287,8 +367,8 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 3. Create Task
-  router.post('/', requireAuth, async (req, res) => {
+  // 3. Create Task (Super Admin, Admin, Manager only)
+  router.post('/', requireAuth, requireRole(['super_admin', 'admin', 'manager']), async (req, res) => {
     const {
       title,
       description,
@@ -301,6 +381,10 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       start_date = null,
       estimated_hours = 0,
       tags = '',
+      source = 'Internal',
+      source_url = null,
+      source_link = null,
+      internal_notes = null,
       assignee_ids = [],
     } = req.body || {};
 
@@ -344,9 +428,12 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
           start_date,
           estimated_hours,
           tags,
-          source
+          source,
+          source_url,
+          source_link,
+          internal_notes
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
         ) RETURNING *
       `;
       const taskValues = [
@@ -366,7 +453,10 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         start_date || null,
         Number(estimated_hours) || 0,
         Array.isArray(tags) ? tags.join(',') : tags || '',
-        'TaskFlow',
+        source || 'Internal',
+        source_url || source_link || null,
+        source_link || source_url || null,
+        internal_notes || null,
       ];
 
       const { rows } = await client.query(insertTaskSql, taskValues);
@@ -402,7 +492,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         action: 'CREATE_TASK',
         entityType: 'task',
         entityId: createdTask.id,
-        details: { taskCode, title: createdTask.title, priority: crm_priority },
+        details: { taskCode, title: createdTask.title, priority: crm_priority, source: createdTask.source },
         ipAddress: req.ip,
       });
 
@@ -417,8 +507,8 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 4. Update Task
-  router.put('/:id', requireAuth, async (req, res) => {
+  // 4. Update Task (Super Admin, Admin, Manager only)
+  router.put('/:id', requireAuth, requireRole(['super_admin', 'admin', 'manager']), async (req, res) => {
     const taskId = req.params.id;
     const {
       title,
@@ -435,6 +525,10 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       completion_percentage,
       tags,
       blocked_reason,
+      source,
+      source_url,
+      source_link,
+      internal_notes,
       assignee_ids,
     } = req.body || {};
 
@@ -477,8 +571,12 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
           tags = COALESCE($15, tags),
           blocked_reason = $16,
           completed_at = $17,
+          source = COALESCE($18, source),
+          source_url = COALESCE($19, source_url),
+          source_link = COALESCE($20, source_link),
+          internal_notes = COALESCE($21, internal_notes),
           updated_at = now()
-        WHERE id = $18 AND organization_id = $19
+        WHERE id = $22 AND organization_id = $23
         RETURNING *
       `;
 
@@ -500,6 +598,10 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         tags !== undefined ? (Array.isArray(tags) ? tags.join(',') : tags) : null,
         blocked_reason !== undefined ? blocked_reason : existing.blocked_reason,
         completedAt,
+        source || null,
+        source_url || source_link || null,
+        source_link || source_url || null,
+        internal_notes !== undefined ? internal_notes : null,
         taskId,
         orgId,
       ];
@@ -526,7 +628,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         action: 'UPDATE_TASK',
         entityType: 'task',
         entityId: taskId,
-        details: { status: newStatus, priority: newPriority },
+        details: { status: newStatus, priority: newPriority, taskCode: rows[0].task_code },
         ipAddress: req.ip,
       });
 
@@ -541,7 +643,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 5. Fast Status Patch (Kanban board drag-and-drop)
+  // 5. Fast Status Patch (Employees allowed on their assigned tasks; Managers/Admins on all)
   router.patch('/:id/status', requireAuth, async (req, res) => {
     const taskId = req.params.id;
     const { status } = req.body || {};
@@ -553,6 +655,25 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     try {
       const pool = poolProvider();
       const orgId = req.user.organization_id;
+      const userRole = req.user.crm_role || 'employee';
+
+      // Verify task exists in org
+      const taskCheck = await pool.query('SELECT * FROM tasks WHERE id = $1 AND organization_id = $2', [taskId, orgId]);
+      if (taskCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Task not found.' });
+      }
+      const existingTask = taskCheck.rows[0];
+
+      // Employee permission check: must be assigned to the task or creator
+      if (userRole === 'employee') {
+        const assignCheck = await pool.query(
+          'SELECT 1 FROM task_assignments WHERE task_id = $1 AND user_id = $2',
+          [taskId, req.user.id]
+        );
+        if (assignCheck.rows.length === 0 && existingTask.created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You can only update the status of tasks assigned to you.' });
+        }
+      }
 
       const coreStatus = mapToCoreStatus(status);
       const isDone = status === 'done';
@@ -579,10 +700,6 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       values.push(taskId, orgId);
 
       const { rows } = await pool.query(query, values);
-      if (rows.length === 0) {
-        return res.status(404).json({ error: 'Task not found.' });
-      }
-
       const updated = rows[0];
 
       // Audit log
@@ -593,7 +710,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
         action: 'UPDATE_STATUS',
         entityType: 'task',
         entityId: taskId,
-        details: { oldStatus: updated.crm_status, newStatus: status, taskCode: updated.task_code },
+        details: { oldStatus: existingTask.crm_status, newStatus: status, taskCode: updated.task_code },
         ipAddress: req.ip,
       });
 
@@ -681,7 +798,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 7. Delete Task
+  // 7. Delete Task (Super Admin, Admin, Manager only)
   router.delete('/:id', requireAuth, requireRole(['super_admin', 'admin', 'manager']), async (req, res) => {
     try {
       const pool = poolProvider();
@@ -714,10 +831,11 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 8. Add Comment
+  // 8. Add Comment / Internal Note
   router.post('/:id/comments', requireAuth, async (req, res) => {
     const taskId = req.params.id;
-    const { comment } = req.body || {};
+    const { comment, is_internal = false } = req.body || {};
+    const userRole = req.user.crm_role || 'employee';
 
     if (!comment || typeof comment !== 'string' || !comment.trim()) {
       return res.status(400).json({ error: 'Comment text cannot be empty.' });
@@ -734,15 +852,43 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       }
       const task = taskCheck.rows[0];
 
+      // Employee permission check
+      if (userRole === 'employee') {
+        const assignCheck = await pool.query(
+          'SELECT 1 FROM task_assignments WHERE task_id = $1 AND user_id = $2',
+          [taskId, req.user.id]
+        );
+        if (assignCheck.rows.length === 0 && task.created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You do not have permission to comment on this task.' });
+        }
+        if (is_internal) {
+          return res.status(403).json({ error: 'Forbidden: Employees cannot create internal-only notes.' });
+        }
+      }
+
+      const internalFlag = Boolean(is_internal && userRole !== 'employee');
+
       const { rows } = await pool.query(
-        `INSERT INTO task_comments (task_id, user_id, comment)
-         VALUES ($1, $2, $3)
+        `INSERT INTO task_comments (task_id, user_id, comment, is_internal)
+         VALUES ($1, $2, $3, $4)
          RETURNING *`,
-        [taskId, req.user.id, comment.trim()]
+        [taskId, req.user.id, comment.trim(), internalFlag]
       );
 
-      // Notify task creator if someone else commented
-      if (task.created_by && task.created_by !== req.user.id) {
+      // Audit log note creation
+      await logAudit(pool, {
+        organizationId: orgId,
+        userId: req.user.id,
+        actorName: req.user.full_name,
+        action: internalFlag ? 'ADD_INTERNAL_NOTE' : 'ADD_COMMENT',
+        entityType: 'task',
+        entityId: taskId,
+        details: { taskCode: task.task_code, isInternal: internalFlag },
+        ipAddress: req.ip,
+      });
+
+      // Notify task creator if someone else commented on public comment
+      if (!internalFlag && task.created_by && task.created_by !== req.user.id) {
         await createNotification(pool, {
           organizationId: orgId,
           userId: task.created_by,
@@ -755,7 +901,7 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
       }
 
       return res.status(201).json({
-        message: 'Comment added.',
+        message: internalFlag ? 'Internal note added.' : 'Comment added.',
         comment: {
           ...rows[0],
           user_id: req.user.id,
@@ -770,41 +916,295 @@ function createTasksRoutes({ poolProvider = getPool } = {}) {
     }
   });
 
-  // 9. List Comments
+  // 9. List Comments (Enforces internal note visibility)
   router.get('/:id/comments', requireAuth, async (req, res) => {
     try {
       const pool = poolProvider();
       const taskId = req.params.id;
       const orgId = req.user.organization_id;
+      const userRole = req.user.crm_role || 'employee';
 
-      // Verify task belongs to the caller's organization before returning comments
+      // Verify task belongs to the caller's organization
       const taskCheck = await pool.query(
-        'SELECT id FROM tasks WHERE id = $1 AND organization_id = $2',
+        'SELECT id, created_by FROM tasks WHERE id = $1 AND organization_id = $2',
         [taskId, orgId]
       );
       if (taskCheck.rows.length === 0) {
         return res.status(404).json({ error: 'Task not found.' });
       }
 
-      const { rows } = await pool.query(
-        `SELECT 
-           tc.id,
-           tc.comment,
-           tc.created_at,
-           u.id AS user_id,
-           u.full_name,
-           u.avatar,
-           u.crm_role
-         FROM task_comments tc
-         JOIN users u ON tc.user_id = u.id
-         WHERE tc.task_id = $1
-         ORDER BY tc.created_at ASC`,
-        [taskId]
-      );
+      // If employee, verify access
+      if (userRole === 'employee') {
+        const assignCheck = await pool.query(
+          'SELECT 1 FROM task_assignments WHERE task_id = $1 AND user_id = $2',
+          [taskId, req.user.id]
+        );
+        if (assignCheck.rows.length === 0 && taskCheck.rows[0].created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You do not have permission to view comments on this task.' });
+        }
+      }
 
+      // Backend visibility rule: Employees CANNOT see internal notes
+      const commentsSql = `
+        SELECT 
+          tc.id,
+          tc.comment,
+          tc.is_internal,
+          tc.created_at,
+          u.id AS user_id,
+          u.full_name,
+          u.avatar,
+          u.crm_role
+        FROM task_comments tc
+        JOIN users u ON tc.user_id = u.id
+        WHERE tc.task_id = $1 ${userRole === 'employee' ? 'AND (tc.is_internal = false OR tc.is_internal IS NULL)' : ''}
+        ORDER BY tc.created_at ASC
+      `;
+
+      const { rows } = await pool.query(commentsSql, [taskId]);
       return res.json({ comments: rows });
     } catch (err) {
       return res.status(500).json({ error: 'Failed to fetch comments.' });
+    }
+  });
+
+  // 10. Task Activity History (Chronological change log)
+  router.get('/:id/history', requireAuth, async (req, res) => {
+    try {
+      const pool = poolProvider();
+      const taskId = req.params.id;
+      const orgId = req.user.organization_id;
+      const userRole = req.user.crm_role || 'employee';
+
+      const taskCheck = await pool.query(
+        'SELECT id, created_by FROM tasks WHERE id = $1 AND organization_id = $2',
+        [taskId, orgId]
+      );
+      if (taskCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Task not found.' });
+      }
+
+      if (userRole === 'employee') {
+        const assignCheck = await pool.query(
+          'SELECT 1 FROM task_assignments WHERE task_id = $1 AND user_id = $2',
+          [taskId, req.user.id]
+        );
+        if (assignCheck.rows.length === 0 && taskCheck.rows[0].created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You do not have access to this task history.' });
+        }
+      }
+
+      const { rows } = await pool.query(
+        `SELECT id, actor_name, action, details, created_at
+         FROM audit_logs
+         WHERE organization_id = $1 AND entity_type = 'task' AND entity_id = $2
+         ORDER BY created_at DESC
+         LIMIT 50`,
+        [orgId, taskId]
+      );
+
+      return res.json({
+        history: rows.map((r) => {
+          let details = r.details;
+          try {
+            if (typeof r.details === 'string') details = JSON.parse(r.details);
+          } catch {}
+          return { ...r, details };
+        }),
+      });
+    } catch (err) {
+      console.error('Task history error:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch task history.' });
+    }
+  });
+
+  // 11. Submit Task Progress & Updates (0% to 100%, Notes, Blockers)
+  router.post('/:id/progress', requireAuth, async (req, res) => {
+    const taskId = req.params.id;
+    const { progress, status, notes, blockers, pending_work } = req.body || {};
+
+    if (progress === undefined || progress === null || isNaN(Number(progress)) || Number(progress) < 0 || Number(progress) > 100) {
+      return res.status(400).json({ error: 'Progress must be a valid number between 0 and 100.' });
+    }
+
+    const newProgress = Math.round(Number(progress));
+
+    try {
+      const pool = poolProvider();
+      const orgId = req.user.organization_id;
+      const userRole = req.user.crm_role || 'employee';
+
+      // 1. Check task existence
+      const taskRes = await pool.query(
+        'SELECT * FROM tasks WHERE id = $1 AND organization_id = $2',
+        [taskId, orgId]
+      );
+      if (taskRes.rows.length === 0) {
+        return res.status(404).json({ error: 'Task not found.' });
+      }
+      const existingTask = taskRes.rows[0];
+
+      // 2. Authorization check: Employees can only update progress on their own assigned tasks
+      if (userRole === 'employee') {
+        const assignCheck = await pool.query(
+          'SELECT user_id FROM task_assignments WHERE task_id = $1 AND user_id = $2',
+          [taskId, req.user.id]
+        );
+        if (assignCheck.rows.length === 0 && existingTask.created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You can only update progress on tasks assigned to you.' });
+        }
+      }
+
+      // 3. Workflow status resolution:
+      // Prompt Rule: "Do not automatically mark a task as Completed just because a user moved a slider to 100%
+      // if the workflow requires manager approval."
+      let targetStatus = existingTask.crm_status;
+      if (status && VALID_STATUSES.includes(status)) {
+        targetStatus = status;
+      } else if (newProgress === 100) {
+        // If employee moves to 100% without explicit approved status, move to in_review
+        targetStatus = (userRole === 'employee') ? 'in_review' : 'done';
+      } else if (newProgress > 0 && targetStatus === 'todo') {
+        targetStatus = 'in_progress';
+      }
+
+      const coreStatus = mapToCoreStatus(targetStatus);
+      const completedAt = targetStatus === 'done' ? new Date() : (targetStatus === 'in_review' ? null : existingTask.completed_at);
+
+      // 4. Update task record
+      const updateQuery = `
+        UPDATE tasks SET
+          completion_percentage = $1,
+          crm_status = $2,
+          status = $3,
+          completed_at = $4,
+          updated_at = now()
+        WHERE id = $5 AND organization_id = $6
+        RETURNING *
+      `;
+      const updateRes = await pool.query(updateQuery, [
+        newProgress,
+        targetStatus,
+        coreStatus,
+        completedAt,
+        taskId,
+        orgId,
+      ]);
+      const updatedTask = updateRes.rows[0];
+
+      // 5. Insert into task_progress_updates
+      const previousProgress = existingTask.completion_percentage || 0;
+      const progressInsertQuery = `
+        INSERT INTO task_progress_updates (
+          task_id, user_id, previous_progress, current_progress, status, notes, blockers, pending_work
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING *
+      `;
+      const progressRes = await pool.query(progressInsertQuery, [
+        taskId,
+        req.user.id,
+        previousProgress,
+        newProgress,
+        targetStatus,
+        notes ? notes.trim() : null,
+        blockers ? blockers.trim() : null,
+        pending_work ? pending_work.trim() : null,
+      ]);
+      const progressRecord = progressRes.rows[0];
+
+      // Also add as task comment if a progress note was provided
+      if (notes && notes.trim().length > 0) {
+        const commentPrefix = `[Progress Update: ${newProgress}%] `;
+        await pool.query(
+          `INSERT INTO task_comments (task_id, user_id, comment, is_internal)
+           VALUES ($1, $2, $3, false)`,
+          [taskId, req.user.id, commentPrefix + notes.trim()]
+        );
+      }
+
+      // 6. Audit logging
+      await logAudit(pool, {
+        organizationId: orgId,
+        userId: req.user.id,
+        actorName: req.user.full_name,
+        action: 'TASK_PROGRESS_UPDATE',
+        entityType: 'task',
+        entityId: taskId,
+        details: {
+          previousProgress,
+          newProgress,
+          status: targetStatus,
+          notes: notes ? notes.trim() : null,
+          blockers: blockers ? blockers.trim() : null,
+        },
+        ipAddress: req.ip,
+      });
+
+      return res.json({
+        message: 'Task progress updated successfully.',
+        task: updatedTask,
+        progressUpdate: progressRecord,
+      });
+    } catch (err) {
+      console.error('Task progress update error:', err.message);
+      return res.status(500).json({ error: 'Failed to update task progress.' });
+    }
+  });
+
+  // 12. Retrieve Task Progress History
+  router.get('/:id/progress-history', requireAuth, async (req, res) => {
+    const taskId = req.params.id;
+
+    try {
+      const pool = poolProvider();
+      const orgId = req.user.organization_id;
+      const userRole = req.user.crm_role || 'employee';
+
+      // Verify task existence
+      const taskCheck = await pool.query(
+        'SELECT id, created_by FROM tasks WHERE id = $1 AND organization_id = $2',
+        [taskId, orgId]
+      );
+      if (taskCheck.rows.length === 0) {
+        return res.status(404).json({ error: 'Task not found.' });
+      }
+
+      // Authorization check for employees
+      if (userRole === 'employee') {
+        const assignCheck = await pool.query(
+          'SELECT user_id FROM task_assignments WHERE task_id = $1 AND user_id = $2',
+          [taskId, req.user.id]
+        );
+        if (assignCheck.rows.length === 0 && taskCheck.rows[0].created_by !== req.user.id) {
+          return res.status(403).json({ error: 'Forbidden: You do not have access to this task progress history.' });
+        }
+      }
+
+      const query = `
+        SELECT 
+          tpu.id,
+          tpu.task_id,
+          tpu.user_id,
+          tpu.previous_progress,
+          tpu.current_progress,
+          tpu.status,
+          tpu.notes,
+          tpu.blockers,
+          tpu.pending_work,
+          tpu.created_at,
+          u.full_name AS author_name,
+          u.crm_role AS author_role,
+          u.avatar AS author_avatar
+        FROM task_progress_updates tpu
+        JOIN users u ON tpu.user_id = u.id
+        WHERE tpu.task_id = $1
+        ORDER BY tpu.created_at DESC
+      `;
+      const { rows } = await pool.query(query, [taskId]);
+      return res.json({ history: rows });
+    } catch (err) {
+      console.error('Fetch progress history error:', err.message);
+      return res.status(500).json({ error: 'Failed to fetch progress history.' });
     }
   });
 

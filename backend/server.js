@@ -14,6 +14,11 @@ const { createClientsRoutes } = require('./routes/clients');
 const { createReportsRoutes } = require('./routes/reports');
 const { createNotificationsRoutes } = require('./routes/notifications');
 const { createAuditRoutes } = require('./routes/audit');
+const { createAttendanceRoutes } = require('./routes/attendance');
+const { createLeavesRoutes } = require('./routes/leaves');
+const { createAiRoutes } = require('./routes/ai');
+const { createAutomationRoutes } = require('./routes/automation');
+const { runAutomations } = require('./services/automation');
 
 const PORT = process.env.PORT || 3001;
 const defaultOrigins = [
@@ -94,6 +99,10 @@ function createApp({
   app.use('/api/reports', createReportsRoutes({ poolProvider }));
   app.use('/api/notifications', createNotificationsRoutes({ poolProvider }));
   app.use('/api/audit-logs', createAuditRoutes({ poolProvider }));
+  app.use('/api/attendance', createAttendanceRoutes({ poolProvider }));
+  app.use('/api/leaves', createLeavesRoutes({ poolProvider }));
+  app.use('/api/ai', createAiRoutes());
+  app.use('/api/automation', createAutomationRoutes({ poolProvider }));
 
 // ─── Health & Readiness Checks ────────────────────────────────────────────────
   app.get('/api/health', (req, res) => {
@@ -151,7 +160,25 @@ if (require.main === module) {
     console.log(`======================================================\n`);
   });
 
+  let backgroundTimer = null;
+  if (process.env.ENABLE_BACKGROUND_RUNNER === 'true') {
+    const intervalMs = parseInt(process.env.AUTOMATION_INTERVAL_MS, 10) || 15 * 60 * 1000;
+    console.log(`🤖 In-Process Automation Runner enabled (Cycle interval: ${Math.round(intervalMs / 1000)}s)`);
+    backgroundTimer = setInterval(async () => {
+      try {
+        const pool = getPool();
+        const orgsRes = await pool.query('SELECT id FROM organizations');
+        for (const org of orgsRes.rows) {
+          await runAutomations(pool, org.id, { actorName: 'In-Process Background Runner', triggerType: 'interval' });
+        }
+      } catch (err) {
+        console.error('Background runner cycle error:', err.message);
+      }
+    }, intervalMs);
+  }
+
   const shutdown = () => {
+    if (backgroundTimer) clearInterval(backgroundTimer);
     server.close(() => {
       closeDatabasePool().catch((error) => {
         console.error('Failed to close PostgreSQL pool:', error.message);
