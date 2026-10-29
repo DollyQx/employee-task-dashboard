@@ -25,7 +25,7 @@ export default function DepartmentsView({
       <div className="departments-grid">
         {departments.length === 0 ? (
           <div className="empty-state">
-            <p>No manufacturing divisions configured.</p>
+            <p>No departments configured.</p>
           </div>
         ) : (
           departments.map((dept) => {
@@ -38,14 +38,14 @@ export default function DepartmentsView({
             return (
               <div key={dept.id} className="department-card">
                 <div className="department-card-top">
-                  <span className="dept-code-badge">{dept.code || 'MFG'}</span>
+                  <span className="dept-code-badge">{dept.code || 'DEPT'}</span>
                   <h3>{dept.name}</h3>
                 </div>
 
-                <p className="department-desc">{dept.description || 'Specialized manufacturing division of Bharat Precision Dynamics.'}</p>
+                <p className="department-desc">{dept.description || 'Specialized department of Startiz Labs.'}</p>
 
                 <div className="department-head-row">
-                  <span className="meta-label">Division Lead:</span>
+                  <span className="meta-label">Department Lead:</span>
                   <div className="head-info">
                     <span className="mini-avatar">
                       {dept.head_avatar || (dept.head_name ? dept.head_name.substring(0, 2).toUpperCase() : (dept.headName ? dept.headName.substring(0, 2).toUpperCase() : 'PL'))}
@@ -56,22 +56,22 @@ export default function DepartmentsView({
 
                 <div className="department-metrics">
                   <div className="metric-box">
-                    <span>Floor Specialists</span>
+                    <span>Team Members</span>
                     <strong>{memberCount || 3}</strong>
                   </div>
                   <div className="metric-box">
-                    <span>Active Orders</span>
+                    <span>Active Tasks</span>
                     <strong>{activeTasks || 4}</strong>
                   </div>
                   <div className="metric-box">
-                    <span>Dispatched</span>
+                    <span>Completed</span>
                     <strong>{completedTasks || 6}</strong>
                   </div>
                 </div>
 
                 <div className="progress-bar-container">
                   <div className="progress-bar-labels">
-                    <span>Throughput Yield</span>
+                    <span>Completion Rate</span>
                     <span>{completionPct}%</span>
                   </div>
                   <div className="progress-bar-track">

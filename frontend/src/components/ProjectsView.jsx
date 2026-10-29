@@ -17,12 +17,12 @@ export default function ProjectsView({
     <div className="projects-view">
       <div className="view-header">
         <div>
-          <h2>Heavy Engineering & OEM Projects</h2>
-          <p>Aerospace defense manifolds, EV powertrain casings, and power turbine fabrication contracts</p>
+          <h2>Client & Strategic Projects</h2>
+          <p>Cross-functional projects, delivery milestones, and team work allocation</p>
         </div>
         {canCreate && onCreateProject && (
           <button type="button" className="button button--primary" onClick={onCreateProject}>
-            + New Engineering Project
+            + New Project
           </button>
         )}
       </div>
@@ -36,7 +36,7 @@ export default function ProjectsView({
               className={`tab-btn${statusFilter === st ? ' is-active' : ''}`}
               onClick={() => setStatusFilter(st)}
             >
-              {st === 'all' ? 'All Contracts' : st.replace('_', ' ').toUpperCase()}
+              {st === 'all' ? 'All Projects' : st.replace('_', ' ').toUpperCase()}
             </button>
           ))}
         </div>
@@ -45,7 +45,7 @@ export default function ProjectsView({
       <div className="projects-grid">
         {filteredProjects.length === 0 ? (
           <div className="empty-state">
-            <p>No engineering projects found in this category.</p>
+            <p>No projects found in this category.</p>
           </div>
         ) : (
           filteredProjects.map((p) => {
@@ -58,7 +58,7 @@ export default function ProjectsView({
               <div key={p.id} className="project-card">
                 <div className="project-card-header">
                   <div>
-                    <span className="project-client-name">🏢 {p.client_name || 'Bharat Heavy Industries'}</span>
+                    <span className="project-client-name">🏢 {p.client_name || 'Startiz Client'}</span>
                     <h3>{p.name}</h3>
                   </div>
                   <span className={`health-pill health-pill--${healthColor}`}>
@@ -66,7 +66,7 @@ export default function ProjectsView({
                   </span>
                 </div>
 
-                <p className="project-desc">{p.description || 'Engineering deliverables in progress.'}</p>
+                <p className="project-desc">{p.description || 'Project deliverables in progress.'}</p>
 
                 <div className="project-meta-row">
                   <div>
@@ -78,7 +78,7 @@ export default function ProjectsView({
                   </div>
                   {p.budget > 0 && (
                     <div>
-                      <span className="meta-label">Contract Value</span>
+                      <span className="meta-label">Project Budget</span>
                       <strong>₹{Number(p.budget).toLocaleString('en-IN')}</strong>
                     </div>
                   )}
@@ -87,7 +87,7 @@ export default function ProjectsView({
                 <div className="project-progress-section">
                   <div className="progress-labels">
                     <span>Deliverable Milestone</span>
-                    <strong>{progress}% ({completed} / {total} orders)</strong>
+                    <strong>{progress}% ({completed} / {total} tasks)</strong>
                   </div>
                   <div className="progress-track">
                     <div className="progress-fill" style={{ width: `${progress}%` }} />

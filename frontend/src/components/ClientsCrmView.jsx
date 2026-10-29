@@ -29,8 +29,8 @@ export default function ClientsCrmView({
     <div className="crm-view">
       <div className="view-header">
         <div>
-          <h2>OEM Clients & Heavy Industry Contracts</h2>
-          <p>Automotive, aerospace, defense, and power sector enterprise client accounts</p>
+          <h2>Enterprise Clients & Accounts</h2>
+          <p>Client accounts, contract valuations, and CRM pipeline stages</p>
         </div>
         {onCreateClient && (
           <button type="button" className="button button--primary" onClick={onCreateClient}>
@@ -46,7 +46,7 @@ export default function ClientsCrmView({
             <span className="kpi-icon kpi-icon--green">₹</span>
           </span>
           <strong>₹{(totalValue / 10000000).toFixed(2)} Cr</strong>
-          <span className="kpi-note">{clients.length} OEM corporate accounts</span>
+          <span className="kpi-note">{clients.length} enterprise client accounts</span>
         </div>
         <div className="kpi-card">
           <span className="kpi-top">
@@ -54,7 +54,7 @@ export default function ClientsCrmView({
             <span className="kpi-icon kpi-icon--blue">✓</span>
           </span>
           <strong>{wonCount}</strong>
-          <span className="kpi-note">Manufacturing under delivery</span>
+          <span className="kpi-note">Active accounts in delivery</span>
         </div>
         <div className="kpi-card">
           <span className="kpi-top">
@@ -71,7 +71,7 @@ export default function ClientsCrmView({
           <span aria-hidden="true">🔍</span>
           <input
             type="search"
-            placeholder="Search by OEM company, contact person, or email..."
+            placeholder="Search by client company, contact person, or email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -101,7 +101,7 @@ export default function ClientsCrmView({
       <div className="clients-grid">
         {filteredClients.length === 0 ? (
           <div className="empty-state">
-            <p>No OEM client records match the current criteria.</p>
+            <p>No client records match the current criteria.</p>
           </div>
         ) : (
           filteredClients.map((c) => {
@@ -130,7 +130,7 @@ export default function ClientsCrmView({
                 <div className="client-details-grid">
                   <div><strong>Email:</strong> {c.email}</div>
                   <div><strong>Phone:</strong> {c.phone || '+91 20 6613 4000'}</div>
-                  <div><strong>Sector:</strong> {c.lead_source || c.source || 'OEM Supply'}</div>
+                  <div><strong>Sector:</strong> {c.lead_source || c.source || 'Enterprise'}</div>
                   <div><strong>Contract Value:</strong> ₹{Number(c.deal_value || 0).toLocaleString('en-IN')}</div>
                 </div>
 

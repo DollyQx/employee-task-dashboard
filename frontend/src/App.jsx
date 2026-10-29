@@ -38,7 +38,9 @@ import ActivityLogView from './components/ActivityLogView';
 import NotificationsView from './components/NotificationsView';
 import CreateTaskModal from './components/CreateTaskModal';
 import AuthModal from './components/AuthModal';
-import { getTaskMetrics, matchesTaskFilters } from './utils/taskMetrics';
+import AttendanceView from './components/AttendanceView';
+import AutomationCenter from './components/AutomationCenter';
+import { matchesTaskFilters } from './utils/taskMetrics';
 import { getStoredManufacturingData } from './data/manufacturingSeedData';
 
 export default function App() {
@@ -130,7 +132,7 @@ export default function App() {
         setCurrentUser(meRes.user);
         return meRes.user;
       } else if (demoRes?.users && demoRes.users.length > 0) {
-        const autoUser = demoRes.users[0];
+        const autoUser = demoRes.users[0]; // Dolly (Super Admin)
         const switchRes = await switchDemoUserApi(autoUser.id);
         setCurrentUser(switchRes.user);
         return switchRes.user;
@@ -144,7 +146,7 @@ export default function App() {
     return null;
   }, []);
 
-  // Load all manufacturing datasets
+  // Load all CRM datasets
   const loadCrmData = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -157,7 +159,7 @@ export default function App() {
         setDbReady(false);
       }
 
-      // 2. Fetch Tasks
+      // 2. Fetch Tasks (Backend enforces RBAC for employee vs manager vs admin)
       let loadedTasks = [];
       try {
         const tasksRes = await fetchTasksApi({ limit: 100 });
@@ -170,7 +172,7 @@ export default function App() {
             urgency: t.urgency || (t.crm_priority === 'urgent' ? 'high' : (t.crm_priority || 'medium')),
             status: t.status || (t.crm_status === 'done' ? 'completed' : (t.crm_status === 'in_progress' ? 'in-progress' : 'pending')),
             employee: t.employee || t.assignees?.[0]?.full_name || 'Unassigned',
-            source: t.source || 'CRM',
+            source: t.source || 'Internal',
           }));
         }
       } catch (err) {
@@ -199,7 +201,6 @@ export default function App() {
       ]);
     } catch (err) {
       console.error('Data load error:', err);
-      // Fallback guarantees zero blank screens
       const store = getStoredManufacturingData();
       setTasks(store.tasks);
       setEmployees(store.users);
@@ -270,7 +271,7 @@ export default function App() {
   };
 
   const handleDeleteTask = async (taskId) => {
-    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    if (!window.confirm('Are you sure you want to delete this task? This action cannot be undone.')) return;
     try {
       await deleteTaskApi(taskId);
       if (selectedTask?.id === taskId) setSelectedTask(null);
@@ -292,11 +293,6 @@ export default function App() {
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     await markAllNotificationsReadApi();
   };
-
-  // Metrics & Filtering
-  const taskMetrics = useMemo(() => getTaskMetrics(tasks), [tasks]);
-  const inProgressCount = tasks.filter((task) => task.crm_status === 'in_progress' || task.status === 'in-progress').length;
-  const completedCount = taskMetrics.completed;
 
   // Filtered task set
   const filteredTasks = useMemo(() => {
@@ -368,21 +364,25 @@ export default function App() {
   const isSuperAdmin = role === 'super_admin';
   const isAdmin = role === 'admin' || isSuperAdmin;
   const isManager = role === 'manager' || isAdmin;
+  const isEmployee = role === 'employee';
+  const canCreateTask = isSuperAdmin || isAdmin || isManager;
 
   // Page titles
   const pageTitles = {
-    overview: ['Dashboard Overview', 'Employee Task Dashboard — Aulten Digital Technical Assessment'],
-    my_tasks: ['My Assigned Tasks', `Tasks assigned to ${currentUser?.full_name || 'you'} from CRM and Helpdesk`],
-    all_tasks: ['All Tasks', 'All tasks fetched and combined from mock CRM and Helpdesk sources'],
-    kanban: ['Task Board', 'Visual Kanban view of all tasks by status'],
-    calendar: ['Task Calendar', 'Monthly view of task deadlines and due dates'],
-    employees: ['Employee Directory', 'Team members and their assigned tasks'],
-    departments: ['Departments', 'Organisational departments and workload summary'],
-    projects: ['Projects', 'Active projects and their task completion progress'],
-    clients: ['Clients', 'Client accounts and CRM pipeline stages'],
-    reports: ['Reports & Analytics', 'Task status distribution, priority breakdown, and CSV export'],
+    overview: ['Role Dashboard', isSuperAdmin ? 'Super Admin Command Center • Dolly' : `Dashboard Overview — ${currentUser?.full_name || 'Team Member'}`],
+    my_tasks: ['My Assigned Tasks', `Tasks assigned to ${currentUser?.full_name || 'you'}`],
+    all_tasks: ['All Tasks', 'Combined list of tasks across all organizational sources'],
+    kanban: ['Task Board', 'Visual Kanban workflow by status and priority'],
+    calendar: ['Task Calendar', 'Schedule and upcoming delivery deadlines'],
+    attendance: ['Attendance & Hours', 'Daily check-in, checkout, and work duration tracking'],
+    automation: ['Automation Center', 'Super Admin Dolly • Zero-Cost Rule-Based Schedulers & Autonomous Engine'],
+    employees: ['Employees Directory', 'Team personnel, designations, departments, and RBAC permissions'],
+    departments: ['Departments', 'Organizational departments and workload summary'],
+    projects: ['Projects', 'Active projects and delivery progress'],
+    clients: ['Clients CRM', 'Client accounts and service pipeline'],
+    reports: ['Reports & Analytics', 'Task distribution, workload reports, and CSV export'],
     notifications: ['Notifications', 'In-app alerts for overdue tasks and status changes'],
-    activity: ['Activity Log', 'Audit trail of task changes and user actions'],
+    activity: ['Activity Log', 'System audit trail of task updates and role actions'],
     settings: ['Settings', 'Preferences, theme, and API connectivity'],
     analytics: ['Team Analytics', 'Workload distribution and completion rate trends'],
     crm: ['CRM Tasks', 'Tasks fetched from mock CRM API (/api/crm/tasks)'],
@@ -391,7 +391,6 @@ export default function App() {
 
   const currentTitle = pageTitles[activePage] || pageTitles.overview;
   const todayLabel = new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
@@ -405,7 +404,7 @@ export default function App() {
         />
       )}
 
-      {/* ── Sidebar Navigation ─────────────────────────────────── */}
+      {/* ── Sidebar Navigation Adapted by Role ─────────────────── */}
       <aside className={`sidebar${mobileNavOpen ? ' sidebar--open' : ''}`} aria-label="Main navigation">
         <button className="brand" type="button" onClick={() => navigate('overview')} aria-label="Employee Task Dashboard">
           <span className="brand-mark" aria-hidden="true"><i /><i /><i /><i /></span>
@@ -414,10 +413,10 @@ export default function App() {
 
         {/* Workspace Switcher / Org Badge */}
         <div className="workspace-switcher">
-          <span className="workspace-avatar">ATF</span>
+          <span className="workspace-avatar">SL</span>
           <div className="workspace-copy">
-            <strong>Aulten Digital</strong>
-            <small>TaskFlow CRM • Technical Assessment</small>
+            <strong>Startiz Labs</strong>
+            <small>TaskFlow • {isSuperAdmin ? 'Super Admin (Dolly)' : (role.replace('_', ' '))}</small>
           </div>
           <span
             className={`sync-indicator${dbReady ? '' : ' sync-indicator--demo'}`}
@@ -428,59 +427,78 @@ export default function App() {
         <nav className="sidebar-nav">
           <p className="nav-label">Task Management</p>
           <button className={`nav-item${activePage === 'overview' ? ' is-active' : ''}`} onClick={() => navigate('overview')}>
-            <span className="nav-icon">📊</span>Overview
+            <span className="nav-icon">📊</span>Dashboard
           </button>
           <button className={`nav-item${activePage === 'my_tasks' ? ' is-active' : ''}`} onClick={() => navigate('my_tasks')}>
             <span className="nav-icon">✅</span>My Tasks
           </button>
-          <button className={`nav-item${activePage === 'all_tasks' ? ' is-active' : ''}`} onClick={() => navigate('all_tasks')}>
-            <span className="nav-icon">📋</span>All Tasks<span className="nav-count">{tasks.length}</span>
-          </button>
+          {!isEmployee && (
+            <button className={`nav-item${activePage === 'all_tasks' ? ' is-active' : ''}`} onClick={() => navigate('all_tasks')}>
+              <span className="nav-icon">📋</span>All Tasks<span className="nav-count">{tasks.length}</span>
+            </button>
+          )}
           <button className={`nav-item${activePage === 'kanban' ? ' is-active' : ''}`} onClick={() => navigate('kanban')}>
             <span className="nav-icon">🗂️</span>Task Board
           </button>
           <button className={`nav-item${activePage === 'calendar' ? ' is-active' : ''}`} onClick={() => navigate('calendar')}>
             <span className="nav-icon">📅</span>Calendar
           </button>
-
-          <p className="nav-label" style={{ marginTop: '12px' }}>Organisation</p>
-          <button className={`nav-item${activePage === 'employees' ? ' is-active' : ''}`} onClick={() => navigate('employees')}>
-            <span className="nav-icon">👥</span>Employees<span className="nav-count">{employees.length || '5'}</span>
-          </button>
-          <button className={`nav-item${activePage === 'departments' ? ' is-active' : ''}`} onClick={() => navigate('departments')}>
-            <span className="nav-icon">🏢</span>Departments<span className="nav-count">{departments.length || '4'}</span>
-          </button>
-          <button className={`nav-item${activePage === 'projects' ? ' is-active' : ''}`} onClick={() => navigate('projects')}>
-            <span className="nav-icon">📁</span>Projects<span className="nav-count">{projects.length || '3'}</span>
+          <button className={`nav-item${activePage === 'attendance' ? ' is-active' : ''}`} onClick={() => navigate('attendance')}>
+            <span className="nav-icon">🕒</span>{isEmployee ? 'My Attendance' : (isManager && !isAdmin ? 'Team Attendance' : 'Attendance')}
           </button>
 
-          {isManager && (
-            <button className={`nav-item${activePage === 'clients' ? ' is-active' : ''}`} onClick={() => navigate('clients')}>
-              <span className="nav-icon">🤝</span>Clients<span className="nav-count">{clients.length || '3'}</span>
-            </button>
+          {/* Organization & Governance (Visible to Super Admin, Admin, Manager) */}
+          {!isEmployee && (
+            <>
+              <p className="nav-label" style={{ marginTop: '12px' }}>Organization</p>
+              {isAdmin && (
+                <button className={`nav-item${activePage === 'employees' ? ' is-active' : ''}`} onClick={() => navigate('employees')}>
+                  <span className="nav-icon">👥</span>Employees<span className="nav-count">{employees.length || '18'}</span>
+                </button>
+              )}
+              <button className={`nav-item${activePage === 'departments' ? ' is-active' : ''}`} onClick={() => navigate('departments')}>
+                <span className="nav-icon">🏢</span>Departments<span className="nav-count">{departments.length || '12'}</span>
+              </button>
+              <button className={`nav-item${activePage === 'projects' ? ' is-active' : ''}`} onClick={() => navigate('projects')}>
+                <span className="nav-icon">📁</span>Projects<span className="nav-count">{projects.length || '7'}</span>
+              </button>
+
+              {isManager && (
+                <button className={`nav-item${activePage === 'clients' ? ' is-active' : ''}`} onClick={() => navigate('clients')}>
+                  <span className="nav-icon">🤝</span>Clients CRM<span className="nav-count">{clients.length || '7'}</span>
+                </button>
+              )}
+
+              <button className={`nav-item${activePage === 'reports' ? ' is-active' : ''}`} onClick={() => navigate('reports')}>
+                <span className="nav-icon">📈</span>Reports
+              </button>
+
+              {isAdmin && (
+                <button className={`nav-item${activePage === 'activity' ? ' is-active' : ''}`} onClick={() => navigate('activity')}>
+                  <span className="nav-icon">📜</span>Activity Log
+                </button>
+              )}
+
+              {currentUser?.crm_role === 'super_admin' && (
+                <button className={`nav-item${activePage === 'automation' ? ' is-active' : ''}`} onClick={() => navigate('automation')}>
+                  <span className="nav-icon">🤖</span>Automation Center
+                </button>
+              )}
+            </>
           )}
 
-          <button className={`nav-item${activePage === 'reports' ? ' is-active' : ''}`} onClick={() => navigate('reports')}>
-            <span className="nav-icon">📈</span>Reports
-          </button>
-
+          <p className="nav-label" style={{ marginTop: '12px' }}>Communications</p>
           <button className={`nav-item${activePage === 'notifications' ? ' is-active' : ''}`} onClick={() => navigate('notifications')}>
             <span className="nav-icon">🔔</span>Notifications
             {unreadCount > 0 && <span className="nav-count text-red">{unreadCount}</span>}
           </button>
 
-          {isAdmin && (
-            <button className={`nav-item${activePage === 'activity' ? ' is-active' : ''}`} onClick={() => navigate('activity')}>
-              <span className="nav-icon">📜</span>Activity Log
-            </button>
-          )}
-
-          <p className="nav-label" style={{ marginTop: '12px' }}>Mock API Feeds</p>
+          <p className="nav-label" style={{ marginTop: '12px' }}>Mock Feeds</p>
           <button className={`nav-item${activePage === 'crm' ? ' is-active' : ''}`} onClick={() => navigate('crm')}>
-            <span className="source-dot source-dot--crm" />CRM Feed
+            <span className="source-dot source-dot--crm" />CRM Tasks
           </button>
           <button className={`nav-item${activePage === 'helpdesk' ? ' is-active' : ''}`} onClick={() => navigate('helpdesk')}>
-            <span className="source-dot source-dot--helpdesk" />Helpdesk Feed
+            <span className="source-dot source-dot--helpdesk" />Helpdesk Tickets
           </button>
         </nav>
 
@@ -490,11 +508,11 @@ export default function App() {
           </button>
           <div className="sidebar-profile" onClick={() => setAuthModalOpen(true)} style={{ cursor: 'pointer' }}>
             <span className="profile-avatar">
-              {currentUser?.avatar || currentUser?.full_name?.substring(0, 2).toUpperCase() || 'DU'}
+              {currentUser?.avatar || (currentUser?.full_name ? currentUser.full_name.substring(0, 2).toUpperCase() : 'DL')}
             </span>
             <div className="profile-copy">
-              <strong>{currentUser?.full_name || 'Demo User'}</strong>
-              <small>{currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'employee'} • Switch</small>
+              <strong>{currentUser?.full_name || 'Dolly'}</strong>
+              <small>{currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'super admin'} • Switch</small>
             </div>
           </div>
         </div>
@@ -508,14 +526,14 @@ export default function App() {
           </button>
 
           <div className="breadcrumbs">
-            <span>Employee Tasks</span>
+            <span>Startiz Labs</span>
             <span className="breadcrumb-slash">/</span>
             <strong>{currentTitle[0]}</strong>
           </div>
 
-          <div className="plant-status-pill" title={dbReady ? 'Backend connected (PostgreSQL)' : 'Demo mode — using local fallback data'}>
+          <div className="plant-status-pill" title={dbReady ? 'Backend connected (PostgreSQL Active)' : 'Demo mode — using local fallback data'}>
             <span className="plant-status-dot" />
-            <span>{dbReady ? 'Backend Connected' : 'Demo Mode'}</span>
+            <span>{dbReady ? 'PostgreSQL Active' : 'Demo Mode'}</span>
           </div>
 
           {/* Global Search Bar */}
@@ -539,42 +557,54 @@ export default function App() {
                 type="button"
                 className="role-switcher-button"
                 onClick={() => setRoleSwitcherOpen((prev) => !prev)}
-                title="Switch demo user"
+                title="Switch demo persona"
               >
-                <span>👤 {currentUser?.full_name || 'Demo User'} ({currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'employee'})</span>
+                <span>👤 {currentUser?.full_name || 'Dolly'} ({currentUser?.crm_role ? currentUser.crm_role.replace('_', ' ') : 'super admin'})</span>
                 <span className="workspace-chevron" aria-hidden="true">▾</span>
               </button>
 
               {roleSwitcherOpen && (
                 <div className="notification-popover" style={{ width: '280px' }}>
                   <div className="popover-heading">
-                    <strong>Switch Demo User</strong>
-                    <span>Demo accounts</span>
+                    <strong>Select Persona</strong>
+                    <span>Test RBAC Roles</span>
                   </div>
-                  {demoUsers.length > 0 ? (
-                    demoUsers.slice(0, 6).map((u) => (
-                      <button
+                  {demoUsers.length ? (
+                    demoUsers.map((u) => (
+                      <div
                         key={u.id}
-                        type="button"
                         className="notification-item"
-                        style={{ width: '100%', background: 'transparent', border: 0, cursor: 'pointer', textAlign: 'left' }}
                         onClick={() => handleSwitchDemoRole(u.id)}
+                        style={{ cursor: 'pointer', padding: '8px 12px' }}
                       >
                         <span className="mini-avatar">{u.avatar || u.full_name?.substring(0, 2).toUpperCase()}</span>
-                        <span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <strong>{u.full_name}</strong>
-                          <small>{u.designation || u.crm_role}</small>
-                        </span>
-                      </button>
+                          <small style={{ display: 'block', color: 'var(--text-secondary)' }}>
+                            {u.crm_role?.replace('_', ' ')} • {u.department_name || 'Team'}
+                          </small>
+                        </div>
+                      </div>
                     ))
                   ) : (
-                    <p className="notification-empty">No demo accounts loaded.</p>
+                    <p className="notification-empty">Loading demo users...</p>
                   )}
+                  <button
+                    type="button"
+                    className="button button--secondary button--sm button--full"
+                    style={{ marginTop: '8px' }}
+                    onClick={() => {
+                      setRoleSwitcherOpen(false);
+                      setAuthModalOpen(true);
+                    }}
+                  >
+                    Manage Authentication →
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* Light / Dark Mode Toggle */}
+            {/* Theme Toggle */}
             <button
               type="button"
               className="theme-toggle-btn"
@@ -644,17 +674,19 @@ export default function App() {
 
             <span className="topbar-divider" />
 
-            {/* New Task Action */}
-            <button
-              type="button"
-              className="button button--primary button--sm"
-              onClick={() => {
-                setEditingTask(null);
-                setCreateTaskModalOpen(true);
-              }}
-            >
-              + New Task
-            </button>
+            {/* New Task Action (Authorized Roles only: Super Admin, Admin, Manager) */}
+            {canCreateTask && (
+              <button
+                type="button"
+                className="button button--primary button--sm"
+                onClick={() => {
+                  setEditingTask(null);
+                  setCreateTaskModalOpen(true);
+                }}
+              >
+                + New Task
+              </button>
+            )}
           </div>
         </header>
 
@@ -669,25 +701,28 @@ export default function App() {
               tasks={filteredTasks}
               onStatusChange={handlePatchStatus}
               onSelectTask={setSelectedTask}
-              onNewTask={() => {
+              onNewTask={canCreateTask ? () => {
                 setEditingTask(null);
                 setCreateTaskModalOpen(true);
-              }}
+              } : undefined}
             />
           ) : activePage === 'calendar' ? (
             <CalendarView
               tasks={tasks}
               onSelectTask={setSelectedTask}
-              onNewTask={() => {
+              onNewTask={canCreateTask ? () => {
                 setEditingTask(null);
                 setCreateTaskModalOpen(true);
-              }}
+              } : undefined}
             />
+          ) : activePage === 'attendance' ? (
+            <AttendanceView currentUser={currentUser} />
           ) : activePage === 'employees' ? (
             <EmployeesView
               employees={employees}
               departments={departments}
               currentUser={currentUser}
+              onRefresh={loadCrmData}
               onSelectEmployeeTasks={openEmployeeTasks}
             />
           ) : activePage === 'departments' ? (
@@ -727,13 +762,15 @@ export default function App() {
               onMarkRead={handleMarkNotificationRead}
               onMarkAllRead={handleMarkAllNotificationsRead}
             />
+          ) : activePage === 'automation' ? (
+            <AutomationCenter currentUser={currentUser} />
           ) : activePage === 'analytics' ? (
             <TeamAnalytics tasks={tasks} onSelectEmployee={openEmployeeTasks} />
           ) : activePage === 'settings' ? (
             <section className="settings-page">
               <div className="page-heading">
                 <div>
-                  <p className="eyebrow">AULTEN DIGITAL • TECHNICAL ASSESSMENT</p>
+                  <p className="eyebrow">STARTIZ LABS • ROLE-BASED SYSTEM</p>
                   <h1>{currentTitle[0]}</h1>
                   <p>{currentTitle[1]}</p>
                 </div>
@@ -742,20 +779,20 @@ export default function App() {
               <section className="settings-section">
                 <div className="section-heading">
                   <div>
-                    <h2>Authentication & Profile</h2>
-                    <p>Current demo user session and role. Use the switcher to change perspective.</p>
+                    <h2>Authentication &amp; User Profile</h2>
+                    <p>Current active session credentials and assigned RBAC role permissions.</p>
                   </div>
                   <button type="button" className="button button--secondary" onClick={() => setAuthModalOpen(true)}>
-                    Switch Demo User
+                    Switch User / Log In
                   </button>
                 </div>
 
                 <div className="connection-row">
                   <span className="employee-avatar mini-avatar">
-                    {currentUser?.avatar || 'DU'}
+                    {currentUser?.avatar || 'DL'}
                   </span>
                   <div className="connection-info">
-                    <strong>{currentUser?.full_name || 'Demo User'}</strong>
+                    <strong>{currentUser?.full_name || 'Dolly'}</strong>
                     <small>{currentUser?.email} • Role: {currentUser?.crm_role} ({currentUser?.designation})</small>
                   </div>
                   <button type="button" className="button button--secondary button--sm" onClick={handleLogout}>
@@ -768,7 +805,7 @@ export default function App() {
                 <div className="section-heading">
                   <div>
                     <h2>Database Connectivity</h2>
-                    <p>PostgreSQL readiness check (<code>/api/ready</code>). Falls back to demo data when offline.</p>
+                    <p>PostgreSQL enterprise readiness probe (<code>/api/ready</code>). Falls back to interactive demo store when offline.</p>
                   </div>
                   <button className="button button--secondary" onClick={loadCrmData} disabled={loading}>
                     {loading ? 'Checking...' : '🔄 Check Connection'}
@@ -781,7 +818,7 @@ export default function App() {
                     <small>/api/ready • Checks backend availability</small>
                   </span>
                   <span className={`connection-status${!dbReady ? ' connection-status--demo' : ''}`}>
-                    <i />{dbReady ? 'Connected (PostgreSQL Active)' : 'Demo Mode (localStorage fallback)'}
+                    <i />{dbReady ? 'Connected (PostgreSQL Active)' : 'Demo Mode (Interactive fallback)'}
                   </span>
                 </div>
               </section>
@@ -789,8 +826,8 @@ export default function App() {
               <section className="settings-section">
                 <div className="section-heading">
                   <div>
-                    <h2>Mock API Integration Feeds</h2>
-                    <p>The frontend fetches tasks from both endpoints and merges them into one unified list.</p>
+                    <h2>Integrated Mock REST API Feeds</h2>
+                    <p>Tasks fetched from CRM and Helpdesk mock endpoints and combined into a prioritized list.</p>
                   </div>
                 </div>
                 <div className="connection-row">
@@ -799,7 +836,7 @@ export default function App() {
                     <strong>CRM Mock API</strong>
                     <small>/api/crm/tasks • Returns sample CRM tasks</small>
                   </span>
-                  <span className="connection-status"><i />Mock Feed</span>
+                  <span className="connection-status"><i />Active Feed</span>
                 </div>
                 <div className="connection-row">
                   <span className="connection-icon connection-icon--helpdesk">H</span>
@@ -807,84 +844,62 @@ export default function App() {
                     <strong>Helpdesk Mock API</strong>
                     <small>/api/helpdesk/tasks • Returns sample Helpdesk tickets</small>
                   </span>
-                  <span className="connection-status"><i />Mock Feed</span>
+                  <span className="connection-status"><i />Active Feed</span>
                 </div>
               </section>
             </section>
           ) : (
-            /* Default: Overview & Task List Views */
+            /* Default: Role-Specific Dashboard & Task Management View */
             <>
               <section className="welcome-row">
                 <div>
                   <p className="eyebrow">{todayLabel}</p>
                   <h1>
-                    {activePage === 'overview' ? `Welcome back, ${currentUser?.full_name || 'Demo User'}` : currentTitle[0]}
+                    {activePage === 'overview' ? `Welcome back, ${currentUser?.full_name || 'Dolly'}` : currentTitle[0]}
                     <span className="heading-period">.</span>
                   </h1>
-                  <p>{activePage === 'overview' ? 'Employee Task Dashboard — tasks combined from mock CRM and Helpdesk APIs.' : currentTitle[1]}</p>
+                  <p>{activePage === 'overview' ? `Role: ${role.replace('_', ' ').toUpperCase()} • Startiz Labs Task Management System` : currentTitle[1]}</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button type="button" className="button button--secondary refresh-button" onClick={loadCrmData} disabled={loading}>
                     <span aria-hidden="true">🔄</span>{loading ? 'Refreshing...' : 'Refresh'}
                   </button>
-                  <button
-                    type="button"
-                    className="button button--primary"
-                    onClick={() => {
-                      setEditingTask(null);
-                      setCreateTaskModalOpen(true);
-                    }}
-                  >
-                    + New Task
-                  </button>
+                  {canCreateTask && (
+                    <button
+                      type="button"
+                      className="button button--primary"
+                      onClick={() => {
+                        setEditingTask(null);
+                        setCreateTaskModalOpen(true);
+                      }}
+                    >
+                      + Create Task
+                    </button>
+                  )}
                 </div>
-              </section>
-
-              {/* KPI Cards Grid */}
-              <section className="kpi-grid" aria-label="Task summary metrics">
-                <button type="button" className="kpi-card" onClick={() => clearFilters()}>
-                  <span className="kpi-top">
-                    <span>Total Tasks</span>
-                    <span className="kpi-icon kpi-icon--blue">📋</span>
-                  </span>
-                  <strong>{taskMetrics.total}</strong>
-                  <span className="kpi-note">From CRM + Helpdesk sources</span>
-                </button>
-                <button type="button" className="kpi-card" onClick={() => { clearFilters(); setOverdueOnly(true); }}>
-                  <span className="kpi-top">
-                    <span>Overdue</span>
-                    <span className="kpi-icon kpi-icon--red">⚠️</span>
-                  </span>
-                  <strong className={taskMetrics.overdue > 0 ? 'text-red' : ''}>{taskMetrics.overdue}</strong>
-                  <span className="kpi-note">Past deadline, not complete</span>
-                </button>
-                <button type="button" className="kpi-card" onClick={() => { clearFilters(); setStatusFilter('in-progress'); }}>
-                  <span className="kpi-top">
-                    <span>In Progress</span>
-                    <span className="kpi-icon kpi-icon--violet">🔄</span>
-                  </span>
-                  <strong>{inProgressCount}</strong>
-                  <span className="kpi-note">Currently being worked on</span>
-                </button>
-                <button type="button" className="kpi-card" onClick={() => { clearFilters(); setStatusFilter('completed'); }}>
-                  <span className="kpi-top">
-                    <span>Completed</span>
-                    <span className="kpi-icon kpi-icon--green">✓</span>
-                  </span>
-                  <strong>{completedCount}</strong>
-                  <span className="kpi-note">Finished and closed</span>
-                </button>
               </section>
 
               {activePage === 'overview' && !loading && (
                 <OverviewInsights
                   tasks={tasks}
+                  reportData={reportData}
+                  currentUser={currentUser}
+                  employees={employees}
                   onApplyFilters={(filters) => {
                     clearFilters();
                     if (filters.statusFilter) setStatusFilter(filters.statusFilter);
                     if (filters.priorityFilter) setPriorityFilter(filters.priorityFilter);
                     if (filters.employeeFilter) setEmployeeFilter(filters.employeeFilter);
+                    if (filters.overdueOnly) setOverdueOnly(true);
                     setActivePage('all_tasks');
+                  }}
+                  onNavigate={navigate}
+                  onOpenCreateTask={() => {
+                    setEditingTask(null);
+                    setCreateTaskModalOpen(true);
+                  }}
+                  onOpenAddEmployee={() => {
+                    setActivePage('employees');
                   }}
                 />
               )}
@@ -893,9 +908,9 @@ export default function App() {
               <section className="task-section">
                 <div className="task-section__header">
                   <div>
-                    <h2>{activePage === 'overview' ? 'All Tasks' : currentTitle[0]}</h2>
+                    <h2>{activePage === 'overview' ? (isEmployee ? 'My Assigned Tasks' : 'All Tasks') : currentTitle[0]}</h2>
                     <p className="task-section__meta">
-                      Showing <strong>{filteredTasks.length}</strong> of {tasks.length} tasks from CRM + Helpdesk
+                      Showing <strong>{filteredTasks.length}</strong> of {tasks.length} tasks
                     </p>
                   </div>
                   <div className="view-mode-toggle">
@@ -948,9 +963,9 @@ export default function App() {
         </main>
 
         <footer className="app-footer">
-          <span>Aulten Digital Private Limited • TaskFlow CRM</span>
-          <span>Employee Task Dashboard • Technical Assessment</span>
-          <span>React 19 + Vite • Node.js + Express • CRM &amp; Helpdesk Feeds</span>
+          <span>Startiz Labs • Employee Management, Task Tracking &amp; Attendance System</span>
+          <span>Role-Based Access Control • Super Admin: Dolly</span>
+          <span>React 19 + Vite • Node.js + Express • PostgreSQL • CRM &amp; Helpdesk Feeds</span>
         </footer>
       </div>
 
@@ -958,12 +973,13 @@ export default function App() {
       {selectedTask && (
         <TaskDetailDrawer
           task={selectedTask}
+          currentUser={currentUser}
           onClose={() => setSelectedTask(null)}
-          onEditTask={(t) => {
+          onEditTask={canCreateTask ? (t) => {
             setEditingTask(t);
             setCreateTaskModalOpen(true);
-          }}
-          onDeleteTask={handleDeleteTask}
+          } : undefined}
+          onDeleteTask={canCreateTask ? handleDeleteTask : undefined}
           onTaskUpdated={(updated) => {
             setTasks((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
             setSelectedTask((prev) => ({ ...prev, ...updated }));
@@ -983,6 +999,7 @@ export default function App() {
         departments={departments}
         employees={employees}
         initialData={editingTask}
+        currentUser={currentUser}
       />
 
       {/* ── Authentication / Persona Switcher Modal ────────────── */}

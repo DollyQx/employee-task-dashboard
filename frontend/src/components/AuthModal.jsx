@@ -2,10 +2,9 @@ import React, { useState } from 'react';
 import { loginApi, forgotPasswordApi, switchDemoUserApi } from '../api/crm';
 
 const DEMO_PRESETS = [
-  { name: 'Aarav Sharma', role: 'VP of Engineering (Super Admin)', email: 'aarav.sharma@example.com', badge: 'super_admin' },
+  { name: 'Dolly', role: 'Super Administrator', email: 'admin@startizlabs.com', badge: 'super_admin' },
   { name: 'Priya Verma', role: 'Head of Quality Assurance (Admin)', email: 'priya.verma@example.com', badge: 'admin' },
   { name: 'Rajesh Kumar', role: 'Principal Product Manager (Manager)', email: 'rajesh.kumar@example.com', badge: 'manager' },
-  { name: 'Vikram Malhotra', role: 'Lead Solutions Architect (Manager)', email: 'vikram.malhotra@example.com', badge: 'manager' },
   { name: 'Sneha Gupta', role: 'DevOps & Cloud Architecture Lead (Manager)', email: 'sneha.gupta@example.com', badge: 'manager' },
   { name: 'Rahul Kumar', role: 'Senior Full Stack Developer (Employee)', email: 'rahul.kumar@example.com', badge: 'employee' },
 ];
@@ -91,8 +90,8 @@ export default function AuthModal({
           <div className="auth-brand">
             <span className="brand-mark"><i /><i /><i /><i /></span>
             <div>
-              <h3>Aulten Digital</h3>
-              <p>TaskFlow CRM • Employee Authentication</p>
+              <h3>Startiz Labs</h3>
+              <p>Employee Management & Task Tracking</p>
             </div>
           </div>
           <button type="button" className="modal-close" onClick={onClose} aria-label="Close dialog">
@@ -165,7 +164,7 @@ export default function AuthModal({
                   id="login-email"
                   type="email"
                   className="form-input"
-                  placeholder="e.g. aarav.sharma@example.com"
+                  placeholder="e.g. admin@startizlabs.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
