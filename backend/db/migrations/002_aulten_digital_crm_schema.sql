@@ -106,7 +106,9 @@ ALTER TABLE tasks ADD COLUMN IF NOT EXISTS completion_percentage INTEGER DEFAULT
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS tags TEXT DEFAULT '';
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source TEXT DEFAULT 'TaskFlow';
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_url TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS source_link TEXT;
 ALTER TABLE tasks ADD COLUMN IF NOT EXISTS blocked_reason TEXT;
+ALTER TABLE tasks ADD COLUMN IF NOT EXISTS internal_notes TEXT;
 
 CREATE INDEX IF NOT EXISTS tasks_org_crm_status_idx ON tasks (organization_id, crm_status);
 CREATE INDEX IF NOT EXISTS tasks_org_crm_priority_idx ON tasks (organization_id, crm_priority);
@@ -119,11 +121,13 @@ CREATE TABLE IF NOT EXISTS task_comments (
   task_id UUID NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
   comment TEXT NOT NULL CHECK (length(btrim(comment)) > 0),
+  is_internal BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS task_comments_task_idx ON task_comments (task_id, created_at);
+CREATE INDEX IF NOT EXISTS task_comments_internal_idx ON task_comments (task_id, is_internal);
 
 -- 7. Task Attachments Metadata table
 CREATE TABLE IF NOT EXISTS task_attachments (
@@ -186,3 +190,141 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 
 CREATE INDEX IF NOT EXISTS user_sessions_token_idx ON user_sessions (session_token);
 CREATE INDEX IF NOT EXISTS user_sessions_expires_idx ON user_sessions (expires_at);
+
+-- 11. User password change flag
+ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT false;
+
+-- 12. Task Progress Updates table
+CREATE TABLE IF NOT EXISTS task_progress_updates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  task_id UUID NOT NULL REFERENCES tasks (id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  previous_progress INTEGER NOT NULL DEFAULT 0,
+  current_progress INTEGER NOT NULL CHECK (current_progress >= 0 AND current_progress <= 100),
+  status TEXT,
+  notes TEXT,
+  blockers TEXT,
+  pending_work TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS task_progress_updates_task_idx ON task_progress_updates (task_id, created_at);
+CREATE INDEX IF NOT EXISTS task_progress_updates_user_idx ON task_progress_updates (user_id);
+
+-- 13. Attendance Records table
+CREATE TABLE IF NOT EXISTS attendance_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  date DATE NOT NULL,
+  check_in_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  check_out_at TIMESTAMPTZ,
+  duration_minutes INTEGER DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'present',
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS attendance_records_org_user_date_idx ON attendance_records (organization_id, user_id, date);
+CREATE INDEX IF NOT EXISTS attendance_records_org_date_idx ON attendance_records (organization_id, date);
+CREATE INDEX IF NOT EXISTS attendance_records_user_active_idx ON attendance_records (user_id, check_out_at);
+
+-- 14. Attendance Corrections table
+CREATE TABLE IF NOT EXISTS attendance_corrections (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  attendance_id UUID NOT NULL REFERENCES attendance_records (id) ON DELETE CASCADE,
+  editor_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  previous_check_in TIMESTAMPTZ,
+  previous_check_out TIMESTAMPTZ,
+  new_check_in TIMESTAMPTZ,
+  new_check_out TIMESTAMPTZ,
+  reason TEXT NOT NULL CHECK (length(btrim(reason)) > 0),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS attendance_corrections_att_idx ON attendance_corrections (attendance_id);
+
+-- 15. Notification Enhancements for Automation
+ALTER TABLE notifications ADD COLUMN IF NOT EXISTS dedup_key TEXT;
+CREATE INDEX IF NOT EXISTS notifications_org_dedup_idx ON notifications (organization_id, dedup_key);
+
+-- 16. Leave Requests table
+CREATE TABLE IF NOT EXISTS leave_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  leave_type TEXT NOT NULL DEFAULT 'casual',
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  days_count NUMERIC(4, 1) NOT NULL DEFAULT 1,
+  reason TEXT NOT NULL CHECK (length(btrim(reason)) > 0),
+  status TEXT NOT NULL DEFAULT 'pending',
+  reviewed_by UUID REFERENCES users (id) ON DELETE SET NULL,
+  review_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS leave_requests_org_user_idx ON leave_requests (organization_id, user_id);
+CREATE INDEX IF NOT EXISTS leave_requests_org_status_idx ON leave_requests (organization_id, status);
+
+-- 17. Recurring Task Templates table
+CREATE TABLE IF NOT EXISTS recurring_task_templates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (length(btrim(title)) > 0),
+  description TEXT,
+  department_id UUID REFERENCES departments (id) ON DELETE SET NULL,
+  project_id UUID REFERENCES projects (id) ON DELETE SET NULL,
+  priority TEXT NOT NULL DEFAULT 'medium',
+  recurrence_pattern TEXT NOT NULL DEFAULT 'weekly',
+  day_of_week INTEGER DEFAULT 1,
+  day_of_month INTEGER DEFAULT 1,
+  estimated_hours NUMERIC(6, 2) DEFAULT 0,
+  assignee_id UUID REFERENCES users (id) ON DELETE SET NULL,
+  creator_id UUID NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  is_active BOOLEAN NOT NULL DEFAULT true,
+  last_generated_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS recurring_templates_org_active_idx ON recurring_task_templates (organization_id, is_active);
+
+-- 18. Automation Rules Configuration table
+CREATE TABLE IF NOT EXISTS automation_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
+  rule_key TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  is_enabled BOOLEAN NOT NULL DEFAULT true,
+  schedule_cron TEXT DEFAULT '*/15 * * * *',
+  config_json TEXT DEFAULT '{}',
+  last_run_at TIMESTAMPTZ,
+  last_run_status TEXT DEFAULT 'pending',
+  last_run_duration_ms INTEGER DEFAULT 0,
+  last_run_details TEXT,
+  failure_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (organization_id, rule_key)
+);
+
+CREATE INDEX IF NOT EXISTS automation_rules_org_key_idx ON automation_rules (organization_id, rule_key);
+
+-- 19. Automation Execution & Audit Logs table
+CREATE TABLE IF NOT EXISTS automation_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  organization_id UUID NOT NULL REFERENCES organizations (id) ON DELETE CASCADE,
+  rule_key TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'success',
+  actions_taken INTEGER DEFAULT 0,
+  details TEXT,
+  duration_ms INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS automation_logs_org_created_idx ON automation_logs (organization_id, created_at);
+
