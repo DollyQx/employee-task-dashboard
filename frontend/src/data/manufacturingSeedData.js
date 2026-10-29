@@ -13,10 +13,10 @@
 // ─── Organisation ──────────────────────────────────────────────────────────────
 export const DEMO_ORGANIZATION = {
   id: 'org-demo-001',
-  name: 'Aulten Digital',
-  code: 'AULTEN',
-  slug: 'aulten-digital',
-  description: 'Employee Task Dashboard — Technical Assessment',
+  name: 'Startiz Labs',
+  code: 'STARTIZ',
+  slug: 'startiz-labs',
+  description: 'Startiz Labs — Employee Management, Task Tracking & Attendance System',
 };
 
 // ─── Departments ───────────────────────────────────────────────────────────────
@@ -59,16 +59,16 @@ export const DEMO_DEPARTMENTS = [
 export const DEMO_USERS = [
   {
     id: 'usr-01',
-    name: 'Aarav Sharma',
-    full_name: 'Aarav Sharma',
-    email: 'aarav.sharma@example.com',
-    employee_id: 'EMP-0101',
+    name: 'Dolly',
+    full_name: 'Dolly',
+    email: 'admin@startizlabs.com',
+    employee_id: 'SL-0001',
     crm_role: 'super_admin',
     role: 'owner',
     department: 'Engineering',
     department_id: 'dept-01',
-    designation: 'VP of Engineering',
-    avatar: 'AS',
+    designation: 'Super Administrator',
+    avatar: 'DL',
   },
   {
     id: 'usr-02',

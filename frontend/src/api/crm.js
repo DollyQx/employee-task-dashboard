@@ -415,11 +415,11 @@ export async function bulkTaskActionApi(action, taskIds, value) {
   }
 }
 
-export async function addTaskCommentApi(taskId, comment) {
+export async function addTaskCommentApi(taskId, comment, isInternal = false) {
   try {
     return await request(`/tasks/${taskId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ comment }),
+      body: JSON.stringify({ comment, is_internal: isInternal }),
     });
   } catch (err) {
     if (err.message === 'BACKEND_UNAVAILABLE') {
@@ -433,6 +433,7 @@ export async function addTaskCommentApi(taskId, comment) {
         user_name: user.full_name,
         user_avatar: user.avatar,
         comment,
+        is_internal: Boolean(isInternal),
         created_at: new Date().toISOString(),
       };
       if (task) {
@@ -441,6 +442,27 @@ export async function addTaskCommentApi(taskId, comment) {
         saveStoredManufacturingData(store);
       }
       return { comment: commentObj };
+    }
+    throw err;
+  }
+}
+
+export async function fetchTaskHistoryApi(taskId) {
+  try {
+    return await request(`/tasks/${taskId}/history`);
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return {
+        history: [
+          {
+            id: 'hist-1',
+            actor_name: 'Dolly',
+            action: 'CREATE_TASK',
+            details: { message: 'Task initialized' },
+            created_at: new Date(Date.now() - 3600000).toISOString(),
+          },
+        ],
+      };
     }
     throw err;
   }
@@ -529,6 +551,27 @@ export async function updateEmployeeApi(empId, data) {
         saveStoredManufacturingData(store);
       }
       return { employee: store.users[idx] };
+    }
+    throw err;
+  }
+}
+
+export async function deactivateEmployeeApi(empId, isActive) {
+  try {
+    return await request(`/employees/${empId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ is_active: isActive }),
+    });
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      const store = getStoredManufacturingData();
+      const emp = store.users.find((u) => u.id === empId);
+      if (emp) {
+        emp.is_active = isActive;
+        emp.employment_status = isActive ? 'active' : 'inactive';
+        saveStoredManufacturingData(store);
+      }
+      return { is_active: isActive, employment_status: isActive ? 'active' : 'inactive' };
     }
     throw err;
   }
@@ -896,3 +939,313 @@ export async function checkReadinessApi() {
     return { status: 'offline', database: 'standalone-simulation' };
   }
 }
+
+// ─── Attendance Management API ───────────────────────────────────────────────
+export async function checkInAttendanceApi() {
+  try {
+    return await request('/attendance/check-in', { method: 'POST' });
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      const now = new Date();
+      return {
+        message: 'Checked in successfully.',
+        record: {
+          id: 'att-' + Date.now(),
+          check_in_at: now.toISOString(),
+          check_out_at: null,
+          status: 'present',
+          date: now.toISOString().split('T')[0],
+          duration_minutes: 0,
+        },
+      };
+    }
+    throw err;
+  }
+}
+
+export async function checkOutAttendanceApi() {
+  try {
+    return await request('/attendance/check-out', { method: 'POST' });
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      const now = new Date();
+      return {
+        message: 'Checked out successfully.',
+        record: {
+          id: 'att-' + Date.now(),
+          check_out_at: now.toISOString(),
+          status: 'checked_out',
+          duration_minutes: 480,
+        },
+      };
+    }
+    throw err;
+  }
+}
+
+export async function getTodayAttendanceApi() {
+  try {
+    return await request('/attendance/today');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { checked_in: false, active_session: false, status: 'not_checked_in' };
+    }
+    throw err;
+  }
+}
+
+export async function getMyAttendanceHistoryApi(params = {}) {
+  try {
+    const qs = new URLSearchParams(params).toString();
+    return await request(`/attendance/my-history${qs ? `?${qs}` : ''}`);
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { records: [] };
+    }
+    throw err;
+  }
+}
+
+export async function getAttendanceRecordsApi(params = {}) {
+  try {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    const str = qs.toString();
+    return await request(`/attendance/records${str ? `?${str}` : ''}`);
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { records: [], count: 0 };
+    }
+    throw err;
+  }
+}
+
+export async function getAttendanceSummaryApi() {
+  try {
+    return await request('/attendance/summary');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return {
+        total_active_employees: 18,
+        total_present_today: 14,
+        currently_active: 8,
+        checked_out_today: 6,
+        not_checked_in_today: 4,
+      };
+    }
+    throw err;
+  }
+}
+
+export async function correctAttendanceApi(id, data) {
+  try {
+    return await request(`/attendance/${id}/correct`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { message: 'Attendance record corrected successfully.' };
+    }
+    throw err;
+  }
+}
+
+// ─── Task Progress Tracking API ──────────────────────────────────────────────
+export async function updateTaskProgressApi(taskId, data) {
+  try {
+    return await request(`/tasks/${taskId}/progress`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      const store = getStoredManufacturingData();
+      const task = store.tasks.find((t) => t.id === taskId);
+      if (task) {
+        task.completion_percentage = data.progress;
+        if (data.status) task.crm_status = data.status;
+      }
+      saveStoredManufacturingData(store);
+      return { message: 'Progress updated', task };
+    }
+    throw err;
+  }
+}
+
+export async function getTaskProgressHistoryApi(taskId) {
+  try {
+    return await request(`/tasks/${taskId}/progress-history`);
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { history: [] };
+    }
+    throw err;
+  }
+}
+
+// ─── Work Monitoring API ─────────────────────────────────────────────────────
+export async function getWorkMonitoringApi(params = {}) {
+  try {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    const str = qs.toString();
+    return await request(`/reports/work-monitoring${str ? `?${str}` : ''}`);
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { summary: {}, employees: [] };
+    }
+    throw err;
+  }
+}
+
+// ─── Password Change API ─────────────────────────────────────────────────────
+export async function changePasswordApi(currentPassword, newPassword) {
+  return await request('/auth/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+// ─── In-App Notifications API ────────────────────────────────────────────────
+export async function getNotificationsApi() {
+  try {
+    return await request('/notifications');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { notifications: DEMO_NOTIFICATIONS, unreadCount: DEMO_NOTIFICATIONS.filter((n) => !n.is_read).length };
+    }
+    throw err;
+  }
+}
+
+// ─── Leave Management API ───────────────────────────────────────────────────
+export async function submitLeaveRequestApi(data) {
+  return await request('/leaves', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getMyLeavesApi() {
+  try {
+    return await request('/leaves/my');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { leaves: [] };
+    }
+    throw err;
+  }
+}
+
+export async function getAllLeavesApi(params = {}) {
+  try {
+    const qs = new URLSearchParams();
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') qs.set(k, String(v));
+    });
+    const str = qs.toString();
+    return await request(`/leaves${str ? `?${str}` : ''}`);
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { leaves: [] };
+    }
+    throw err;
+  }
+}
+
+export async function reviewLeaveRequestApi(id, status, reviewNotes) {
+  return await request(`/leaves/${id}/review`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, review_notes: reviewNotes }),
+  });
+}
+
+// ─── Automation Center API (Super Admin Dolly) ──────────────────────────────
+export async function getAutomationRulesApi() {
+  try {
+    return await request('/automation/rules');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return {
+        rules: [
+          { rule_key: 'task_sla_monitor', name: 'Task SLA & Deadline Monitor', description: 'Scans for overdue and due-soon tasks.', is_enabled: true, schedule_cron: '*/15 * * * *', last_run_status: 'success', last_run_duration_ms: 45, failure_count: 0 },
+          { rule_key: 'recurring_task_generator', name: 'Recurring Task Generator', description: 'Generates routine tasks idempotently.', is_enabled: true, schedule_cron: '0 6 * * *', last_run_status: 'success', last_run_duration_ms: 60, failure_count: 0 },
+          { rule_key: 'missing_checkout_detector', name: 'Missing Checkout Detector', description: 'Detects open attendance sessions.', is_enabled: true, schedule_cron: '0 * * * *', last_run_status: 'success', last_run_duration_ms: 30, failure_count: 0 },
+          { rule_key: 'late_attendance_detector', name: 'Late Attendance Detector', description: 'Flags check-ins after standard start time.', is_enabled: true, schedule_cron: '*/30 * * * *', last_run_status: 'success', last_run_duration_ms: 25, failure_count: 0 },
+        ],
+      };
+    }
+    throw err;
+  }
+}
+
+export async function updateAutomationRuleApi(ruleKey, data) {
+  return await request(`/automation/rules/${ruleKey}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function triggerAutomationRunNowApi() {
+  return await request('/automation/run-now', {
+    method: 'POST',
+  });
+}
+
+export async function getAutomationLogsApi() {
+  try {
+    return await request('/automation/logs');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { logs: [], dispatchedNotifications: [] };
+    }
+    throw err;
+  }
+}
+
+export async function getRecurringTemplatesApi() {
+  try {
+    return await request('/automation/templates');
+  } catch (err) {
+    if (err.message === 'BACKEND_UNAVAILABLE') {
+      return { templates: [] };
+    }
+    throw err;
+  }
+}
+
+export async function createRecurringTemplateApi(data) {
+  return await request('/automation/templates', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+// ─── AI Assistance API (Zero-Cost Policy) ───────────────────────────────────
+export async function draftTaskWithAiApi(title, category, department) {
+  return await request('/ai/draft-task', {
+    method: 'POST',
+    body: JSON.stringify({ title, category, department }),
+  });
+}
+
+export async function summarizeProgressWithAiApi(payload) {
+  return await request('/ai/summarize-progress', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function suggestNextStepsWithAiApi(payload) {
+  return await request('/ai/suggest-next-steps', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+
