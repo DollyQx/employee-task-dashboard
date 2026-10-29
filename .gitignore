@@ -5,3 +5,22 @@ dist/
 .env.*
 !.env.example
 !.env.*.example
+
+# Logs and Crash Dumps
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database Dumps and Local Storage
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.dump
+
+# OS and Editor Artifacts
+.DS_Store
+Thumbs.db
+*.swp
+*.swo

@@ -1,0 +1,48 @@
+name: Scheduled Automation Engine
+
+on:
+  schedule:
+    # Runs hourly at minute 0 (100% Free on GitHub Actions public repos / 2,000 free mins on private)
+    - cron: '0 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions web UI
+
+# Explicit least-privilege token permissions
+permissions:
+  contents: read
+
+# Concurrency group ensures only one automation run executes at any time
+concurrency:
+  group: startiz-automation-runner
+  cancel-in-progress: false
+
+jobs:
+  run-automations:
+    name: Execute Task & Attendance Automations
+    runs-on: ubuntu-latest
+    timeout-minutes: 10 # Prevents hung connection from exhausting minutes
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Production Dependencies
+        working-directory: backend
+        run: |
+          npm ci --omit=dev
+
+      - name: Run Automation Cycle
+        working-directory: backend
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          APP_TIMEZONE: 'Asia/Kolkata'
+          ORG_SLUG: 'startiz-labs'
+        run: |
+          node scripts/run-automations.js
+
